@@ -1,40 +1,30 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Nur POST erlaubt" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Nur POST erlaubt" });
 
   const { address } = req.body;
-  if (!address) {
-    return res.status(400).json({ error: "Keine Adresse übermittelt" });
-  }
+  if (!address) return res.status(400).json({ error: "Keine Adresse übermittelt" });
+
+  const query = address.startsWith("KT") ? 
+    `query { token(where:{fa_contract:{_eq:"${address}"}},limit:15){ name description metadata tags } }` :
+    `query { token(where:{_or:[{creator_id:{_eq:"${address}"},{issuer:{_eq:"${address}"},{minter:{_eq:"${address}"}}]},limit:15){ name description metadata tags } }`;
 
   try {
-    // REST-API von Objkt: alle Tokens eines Künstlers
-    const url = `https://api.objkt.com/v2/tokens?creator=${encodeURIComponent(address)}&limit=20`;
+    const response = await fetch("https://data.objkt.com/v3/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query })
+    });
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error("Objkt API nicht erreichbar. Bitte später erneut versuchen.");
-    }
+    if (!response.ok) return res.status(502).json({ error: "Objkt API nicht erreichbar. Bitte später erneut versuchen." });
 
     const data = await response.json();
+    if (!data || !data.data) return res.status(404).json({ error: "Keine Daten von Objkt erhalten. Eventuell falsche Adresse." });
 
-    if (!Array.isArray(data) || data.length === 0) {
-      throw new Error("Keine Werke gefunden. Eventuell falscher Künstler oder keine NFTs verfügbar.");
-    }
-
-    // Rückgabe der wichtigsten Daten für die Prompt-Generierung
-    const tokens = data.map(t => ({
-      name: t.name,
-      description: t.metadata?.description || "",
-      tags: t.metadata?.tags || [],
-      metadata: t.metadata || {}
-    }));
+    const tokens = Object.values(data.data)[0];
+    if (!tokens || tokens.length === 0) return res.status(404).json({ error: "Keine Werke gefunden. Eventuell reiner Collector oder Collab." });
 
     res.status(200).json({ tokens });
-
   } catch (e) {
-    console.error("Objkt API Fehler:", e.message);
-    res.status(500).json({ error: e.message || "Objkt API konnte nicht erreicht werden." });
+    res.status(500).json({ error: "Objkt API konnte nicht erreicht werden: " + e.message });
   }
 }
