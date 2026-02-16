@@ -1,42 +1,69 @@
 import fetch from "node-fetch";
+import { JSDOM } from "jsdom";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
+  if (req.method !== "POST")
     return res.status(405).json({ error: "Nur POST erlaubt" });
-  }
 
   const { address } = req.body;
-  if (!address) return res.status(400).json({ error: "Keine Adresse übermittelt" });
+  if (!address)
+    return res.status(400).json({ error: "Keine Adresse übermittelt" });
 
   try {
-    // TzKT API: Nur selbst erstellte NFTs
-    const url = `https://api.tzkt.io/v1/tokens/balances?account=${address}&token.standard=fa2&token.creators=${address}&limit=50`;
+    // URL zur Created-Seite des Künstlers
+    const url = `https://objkt.com/users/${address}?tab=created`;
 
-    const response = await fetch(url);
-    if (!response.ok) return res.status(502).json({ error: "Objkt/TzKT API nicht erreichbar" });
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+          "(KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+      },
+    });
 
-    const data = await response.json();
-    if (!data || data.length === 0) {
-      return res.status(404).json({ error: "Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab." });
-    }
+    if (!response.ok)
+      return res
+        .status(502)
+        .json({ error: "Objkt Seite nicht erreichbar. Bitte später erneut." });
 
-    // Relevante Infos extrahieren
-    const tokens = data
-      .map(item => ({
-        name: item.token.metadata?.name || "",
-        description: item.token.metadata?.description || "",
-        tags: item.token.metadata?.tags || [],
-        image: item.token.metadata?.displayUri || item.token.metadata?.artifactUri || ""
-      }))
-      .filter(t => t.image); // Nur NFTs mit Bild-URL
+    const html = await response.text();
 
-    if (tokens.length === 0) {
-      return res.status(404).json({ error: "Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab." });
-    }
+    // Parse HTML via JSDOM
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
 
-    res.status(200).json({ tokens });
+    // Alle NFT-Cards finden (nur Created)
+    const nftCards = document.querySelectorAll(
+      'div.sc-gqjmRU > a[href^="/objkt/"]'
+    );
 
+    if (!nftCards || nftCards.length === 0)
+      return res.status(404).json({
+        error: "Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.",
+      });
+
+    // Extrahiere Bild-URLs
+    const tokens = [];
+    nftCards.forEach((card) => {
+      const imgEl = card.querySelector("img");
+      if (imgEl && imgEl.src) {
+        tokens.push({
+          name: imgEl.alt || "NFT",
+          image: imgEl.src,
+        });
+      }
+    });
+
+    if (tokens.length === 0)
+      return res.status(404).json({
+        error: "Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.",
+      });
+
+    // Optional: Limit auf z.B. 40 Bilder, um Ladezeit zu begrenzen
+    res.status(200).json({ tokens: tokens.slice(0, 40) });
   } catch (e) {
-    res.status(500).json({ error: "Serverfehler: " + e.message });
+    res.status(500).json({
+      error: "Objkt konnte nicht analysiert werden: " + e.message,
+    });
   }
 }
