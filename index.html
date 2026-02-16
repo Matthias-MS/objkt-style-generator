@@ -179,29 +179,24 @@ btn.innerText="Kunstwerk generieren";
 
 // ====================== FETCH ÜBER VERCEL-PROXY ======================
 async function fetchObjktData(address){
+  const response = await fetch("/api/objkt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address })
+  });
 
-const response = await fetch("/api/objkt", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ address })
-});
+  if (!response.ok) {
+    const err = await response.json().catch(()=>null);
+    throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
+  }
 
-if(!response.ok){
-const err = await response.json().catch(()=>null);
-throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
-}
+  const json = await response.json();
 
-const json = await response.json();
+  if (!json.tokens || json.tokens.length === 0) {
+    throw new Error("Keine Werke gefunden. Eventuell reiner Collector oder Collab.");
+  }
 
-if(!json.tokens){
-throw new Error("Keine Daten von Objkt erhalten. Eventuell falsche Adresse.");
-}
-
-if(!json.tokens || json.tokens.length===0){
-throw new Error("Keine Werke gefunden. Eventuell reiner Collector oder Collab.");
-}
-
-return json.tokens;
+  return json.tokens;
 }
 
 // ====================== PROMPT-FUNKTION ======================
@@ -260,6 +255,7 @@ document.body.removeChild(link);
 </body>
 </html>
 <!-- redeploy -->
+
 
 
 
