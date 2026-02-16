@@ -138,7 +138,7 @@ function showError(msg){
   document.getElementById('statusArea').classList.add('hidden');
 }
 
-// ====================== ULTRA-STABILES FETCH ======================
+// ====================== FETCH ======================
 async function fetchObjktData(address){
   try {
     const response = await fetch("/api/objkt", {
@@ -162,7 +162,7 @@ async function fetchObjktData(address){
   }
 }
 
-// ====================== ULTRA-STABILER ANALYSE-LOOP ======================
+// ======================  ANALYSE-LOOP ======================
 async function analyzeTokens(tokens){
   for (let i = 0; i < tokens.length; i++) {
     updateProgress(Math.floor((i + 1) / tokens.length * 100), `Analysiere NFT-Bilder...`, `Analysiere ${i+1}/${tokens.length}`);
@@ -183,19 +183,19 @@ async function analyzeTokens(tokens){
 }
 
 // ====================== START GENERATION ======================
-async function startGeneration(){
+async function startGeneration() {
   let input = document.getElementById('artistUrl').value.trim();
   const btn = document.getElementById('generateBtn');
   document.getElementById('resultArea').classList.add('hidden');
   document.getElementById('errorArea').classList.add('hidden');
 
-  if(!input){ showError("Bitte Link oder Adresse eingeben."); return; }
+  if (!input) { showError("Bitte Link oder Adresse eingeben."); return; }
 
-  input = input.replace(/\/$/,"");
+  input = input.replace(/\/$/, "");
   let parts = input.split('/');
   let address = parts.pop();
 
-  if(!address.startsWith("tz") && !address.startsWith("KT")){
+  if (!address.startsWith("tz") && !address.startsWith("KT")) {
     showError("Ungültige Adresse.");
     return;
   }
@@ -203,40 +203,72 @@ async function startGeneration(){
   btn.disabled = true;
   btn.innerText = "Verarbeite...";
 
-  try{
-    updateProgress(0,"Analysiere Artist...");
+  try {
+    updateProgress(0, "Analysiere Artist...");
+
+    // ====================== FETCH ======================
     const tokens = await fetchObjktData(address);
 
-    if(tokens.length === 0){
-      throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
+    // ====================== SICHERHEITSPRÜFUNG ======================
+    if (!tokens || tokens.length === 0) {
+      showError("Keine NFT-Bilder gefunden oder nicht zugänglich. Vorgang abgebrochen.");
+      btn.disabled = false;
+      btn.innerText = "Kunstwerk generieren";
+      return; // bricht sauber ab
     }
 
-    await analyzeTokens(tokens);
+    updateProgress(0, "Analysiere NFT-Bilder...");
 
-    updateProgress(40,"Extrahiere Stilmerkmale...");
+    // ====================== ULTRA-STABILER ANALYSE-LOOP ======================
+    for (let i = 0; i < tokens.length; i++) {
+      updateProgress(Math.floor((i + 1) / tokens.length * 100), "Analysiere NFT-Bilder...", `Analysiere ${i + 1}/${tokens.length}`);
+      await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
+
+      try {
+        const token = tokens[i] || {};
+        const meta = token.metadata || {};
+        const imageUrl = meta.displayUri || meta.artifactUri || token.image;
+
+        if (!imageUrl) {
+          console.warn(`NFT ${i + 1} hat keine Bild-URL, wird übersprungen.`);
+          continue; // überspringt fehlerhafte NFTs
+        }
+
+        // Optional: Farb-/Inhaltsanalyse hier einfügen
+        // await analyzeImage(imageUrl);
+
+      } catch (err) {
+        console.warn(`NFT ${i + 1} konnte nicht analysiert werden:`, err);
+        continue; // Fehler ignorieren und weitermachen
+      }
+    }
+
+    updateProgress(40, "Extrahiere Stilmerkmale...");
     const prompt = createAdvancedPrompt(tokens);
 
-    if(currentMode==="image"){
-      updateProgress(70,"Generiere Bild...");
+    if (currentMode === "image") {
+      updateProgress(70, "Generiere Bild...");
       const img = await generateImageUrl(prompt);
       displayResult(img);
     } else {
-      updateProgress(60,"Generiere Frames...");
+      updateProgress(60, "Generiere Frames...");
       let frames = [];
-      for(let i=0;i<4;i++){
-        frames.push(await generateImageUrl(prompt+", Variation "+i));
+      for (let i = 0; i < 4; i++) {
+        frames.push(await generateImageUrl(prompt + ", Variation " + i));
       }
-      updateProgress(95,"Erstelle GIF...");
+      updateProgress(95, "Erstelle GIF...");
       createGif(frames);
     }
 
-  } catch(e){
-    showError("Fehler: "+e.message);
+  } catch (e) {
+    console.error(e);
+    showError("Fehler: " + (e.message || "Unerwarteter Fehler"));
   } finally {
-    btn.disabled=false;
-    btn.innerText="Kunstwerk generieren";
+    btn.disabled = false;
+    btn.innerText = "Kunstwerk generieren";
   }
 }
+
 
 // ====================== PROMPT-FUNKTION ======================
 function createAdvancedPrompt(tokens){
@@ -287,3 +319,4 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
