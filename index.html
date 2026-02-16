@@ -179,20 +179,22 @@ btn.innerText="Kunstwerk generieren";
 
 // ====================== FETCH ÜBER VERCEL-PROXY ======================
 async function fetchObjktData(address){
-const response = await fetch("/api/objkt", {
-  method: "POST",
-  headers: {"Content-Type":"application/json"},
-  body: JSON.stringify({ address })
+
+const response = await fetch("/api/objkt",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body: JSON.stringify({ address })   // <<< NUR address senden!
 });
 
-
 if(!response.ok){
-throw new Error("Objkt API nicht erreichbar. Bitte später erneut versuchen.");
+const err = await response.json().catch(()=>null);
+throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
 }
 
-const json=await response.json();
+const json = await response.json();
+
 if(!json.tokens){
-throw new Error("Keine Daten von Objkt erhalten. Eventuell falsche Adresse oder CORS-Problem.");
+throw new Error("Keine Daten von Objkt erhalten. Eventuell falsche Adresse.");
 }
 
 if(!json.tokens || json.tokens.length===0){
@@ -257,4 +259,5 @@ document.body.removeChild(link);
 </script>
 </body>
 </html>
+
 
