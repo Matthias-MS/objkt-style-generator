@@ -165,14 +165,28 @@ async function startGeneration(){
 
     updateProgress(0,"Analysiere NFT-Bilder...");
 
-    // Analysiere jedes NFT und aktualisiere kleine Fortschrittsanzeige
-    for(let i=0;i<tokens.length;i++){
-      updateProgress(Math.floor((i+1)/tokens.length*100), 
-                     "Analysiere NFT-Bilder...", 
-                     `Analysiere ${i+1}/${tokens.length}`);
-      await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
-      // hier könnten Farb-/Inhaltsfeatures der Bilder analysiert werden
+// ====================== ANALYSE-LOOP ======================
+for (let i = 0; i < tokens.length; i++) {
+  updateProgress(Math.floor((i + 1) / tokens.length * 100), `Analysiere ${i+1}/${tokens.length}`);
+  await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
+
+  try {
+    // Prüfen ob Bild vorhanden
+    const imageUrl = tokens[i]?.metadata?.displayUri || tokens[i]?.metadata?.artifactUri || tokens[i]?.image;
+    if (!imageUrl) {
+      console.warn(`NFT ${i+1} hat keine Bild-URL, wird übersprungen.`);
+      continue; // überspringt fehlerhafte NFTs
     }
+
+    // Optional: hier kannst du Analyse-Funktionen einfügen
+    // await analyzeImage(imageUrl);
+
+  } catch (err) {
+    console.warn(`NFT ${i+1} konnte nicht analysiert werden:`, err);
+    continue; // Fehler ignorieren und weitermachen
+  }
+}
+
 
     updateProgress(40,"Extrahiere Stilmerkmale...");
     const prompt=createAdvancedPrompt(tokens);
@@ -269,6 +283,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
