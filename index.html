@@ -12,6 +12,12 @@
 
 @keyframes blink-red {0%,50%,100%{opacity:1;transform:scale(1);}25%,75%{opacity:0.3;transform:scale(0.98);}}
 .error-blink{animation:blink-red 0.6s ease-in-out 2;}
+/* kleine Fortschrittsanzeige während Analyse */
+#analyzeProgress {
+  font-size: 0.85rem;
+  color: #4f46e5; /* indigo-600 */
+  margin-top: 4px;
+}
 </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans min-h-screen">
@@ -65,6 +71,7 @@ class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500"
 style="width:0%">
 </div>
 </div>
+<div id="analyzeProgress" class="hidden"></div>
 </div>
 
 <div id="errorArea"
@@ -90,7 +97,7 @@ Dieses Werk ist ein KI-generiertes Unikat, inspiriert durch die Metadaten des K�
 </div>
 
 <footer class="mt-12 text-center text-xs text-gray-400 uppercase tracking-widest leading-relaxed">
-<p>• Nutzt Objkt GraphQL API & Pollinations.ai Open Source SDXL •</p>
+<p>• Nutzt Webscraping & Pollinations.ai Open Source SDXL •</p>
 <p>• Datenschutzkonform • Kostenlose Webapp by MNTG •</p>
 </footer>
 
@@ -109,11 +116,18 @@ function setMode(mode){
     "py-3 px-4 rounded-xl border-2 transition font-medium border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200";
 }
 
-function updateProgress(percent,text){
+function updateProgress(percent,text,analyzeText=""){
   document.getElementById('statusArea').classList.remove('hidden');
   document.getElementById('progressBar').style.width=percent+'%';
   document.getElementById('percentText').innerText=percent+'%';
   document.getElementById('statusText').innerText=text;
+  const analyzeDiv = document.getElementById('analyzeProgress');
+  if(analyzeText){
+    analyzeDiv.innerText = analyzeText;
+    analyzeDiv.classList.remove('hidden');
+  } else {
+    analyzeDiv.classList.add('hidden');
+  }
 }
 
 function showError(msg){
@@ -150,11 +164,14 @@ async function startGeneration(){
     const tokens=await fetchObjktData(address);
 
     updateProgress(0,"Analysiere NFT-Bilder...");
-    // Analysiere jedes Bild für den Prompt
+
+    // Analysiere jedes NFT und aktualisiere kleine Fortschrittsanzeige
     for(let i=0;i<tokens.length;i++){
-      updateProgress(Math.floor((i+1)/tokens.length*100), `Analysiere ${i+1}/${tokens.length}`);
-      await new Promise(r => setTimeout(r, 50)); // optional: kleine Verzögerung für Frontend-Update
-      // Hier könntest du noch Bildanalyse/Farb-/Inhaltsfeatures einbauen
+      updateProgress(Math.floor((i+1)/tokens.length*100), 
+                     "Analysiere NFT-Bilder...", 
+                     `Analysiere ${i+1}/${tokens.length}`);
+      await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
+      // hier könnten Farb-/Inhaltsfeatures der Bilder analysiert werden
     }
 
     updateProgress(40,"Extrahiere Stilmerkmale...");
@@ -183,7 +200,7 @@ async function startGeneration(){
   }
 }
 
-// ====================== FETCH ÜBER VERCEL-PROXY ======================
+// ====================== FETCH ÜBER API ======================
 async function fetchObjktData(address){
   const response = await fetch("/api/objkt", {
     method: "POST",
@@ -191,27 +208,25 @@ async function fetchObjktData(address){
     body: JSON.stringify({ address })
   });
 
-  if (!response.ok) {
+  if(!response.ok){
     const err = await response.json().catch(()=>null);
     throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
   }
 
   const json = await response.json();
-
-  if (!json.tokens || json.tokens.length===0){
+  if(!json.tokens || json.tokens.length===0){
     throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
   }
 
   return json.tokens;
 }
 
-// ====================== PROMPT FUNKTION ======================
+// ====================== PROMPT-FUNKTION ======================
 function createAdvancedPrompt(tokens){
   let textData="";
   tokens.forEach(t=>{
     textData+=(t.name||"")+" ";
     textData+=(t.description||"")+" ";
-    if(t.tags && Array.isArray(t.tags)){textData+=t.tags.join(" ")+" ";}
   });
   textData=textData.toLowerCase().replace(/[^\w\s]/g,"").split(/\s+/).filter(w=>w.length>3).slice(0,40).join(", ");
   return `Hochwertiges, einzigartiges digitales Kunstwerk, inspiriert durch die visuelle Sprache von ${textData}, abstrakte Komposition, künstlerische Textur, einzigartig, transformativ, kein Text, kein Logo`;
@@ -254,4 +269,3 @@ function displayResult(source){
 </script>
 </body>
 </html>
-
