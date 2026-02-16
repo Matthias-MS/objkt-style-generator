@@ -183,19 +183,19 @@ async function analyzeTokens(tokens){
 }
 
 // ====================== START GENERATION ======================
-async function startGeneration() {
-  let input = document.getElementById('artistUrl').value.trim();
+async function startGeneration(){
   const btn = document.getElementById('generateBtn');
+  let input = document.getElementById('artistUrl').value.trim();
   document.getElementById('resultArea').classList.add('hidden');
   document.getElementById('errorArea').classList.add('hidden');
 
-  if (!input) { showError("Bitte Link oder Adresse eingeben."); return; }
+  if(!input){showError("Bitte Link oder Adresse eingeben."); return;}
 
-  input = input.replace(/\/$/, "");
+  input = input.replace(/\/$/,"");
   let parts = input.split('/');
   let address = parts.pop();
 
-  if (!address.startsWith("tz") && !address.startsWith("KT")) {
+  if(!address.startsWith("tz") && !address.startsWith("KT")){
     showError("Ungültige Adresse.");
     return;
   }
@@ -203,21 +203,83 @@ async function startGeneration() {
   btn.disabled = true;
   btn.innerText = "Verarbeite...";
 
-  try {
-    updateProgress(0, "Analysiere Artist...");
-
+  try{
+    updateProgress(0,"Analysiere Artist...");
+    
     // ====================== FETCH ======================
-    const tokens = await fetchObjktData(address);
+    let tokens = [];
+    try {
+      const response = await fetch("/api/objkt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address })
+      });
 
-    // ====================== SICHERHEITSPRÜFUNG ======================
-    if (!tokens || tokens.length === 0) {
-      showError("Keine NFT-Bilder gefunden oder nicht zugänglich. Vorgang abgebrochen.");
-      btn.disabled = false;
-      btn.innerText = "Kunstwerk generieren";
-      return; // bricht sauber ab
+      if (response.ok){
+        const json = await response.json();
+        tokens = Array.isArray(json.tokens) ? json.tokens : [];
+      } else {
+        console.warn("Objkt Fetch nicht ok:", response.status);
+      }
+
+    } catch (e){
+      console.warn("fetchObjktData Fehler:", e);
     }
 
-    updateProgress(0, "Analysiere NFT-Bilder...");
+    if (!tokens.length){
+      showError("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
+      return;
+    }
+
+    // ====================== ANALYSE-LOOP ======================
+    for (let i = 0; i < tokens.length; i++) {
+      updateProgress(Math.floor((i+1)/tokens.length*100), "Analysiere NFT-Bilder...", `Analysiere ${i+1}/${tokens.length}`);
+      await new Promise(r => setTimeout(r,50)); // kleine Verzögerung für UI
+
+      try {
+        const token = tokens[i] || {};
+        const meta = token.metadata || {};
+        const imageUrl = meta.displayUri || meta.artifactUri || token.image;
+
+        if (!imageUrl) continue; // NFT ohne Bild überspringen
+
+        // Optional: hier könntest du Farb-/Inhaltsanalyse einfügen
+      } catch(err){
+        console.warn(`NFT ${i+1} Analyse Fehler:`, err);
+        continue; // Fehler ignorieren
+      }
+    }
+
+    updateProgress(40,"Extrahiere Stilmerkmale...");
+    const prompt = createAdvancedPrompt(tokens);
+
+    if(currentMode==="image"){
+      updateProgress(70,"Generiere Bild...");
+      const img = await generateImageUrl(prompt);
+      displayResult(img);
+    } else {
+      updateProgress(60,"Generiere Frames...");
+      let frames = [];
+      for(let i=0;i<4;i++){
+        try {
+          frames.push(await generateImageUrl(prompt+", Variation "+i));
+        } catch(err){
+          console.warn(`Frame ${i} konnte nicht generiert werden:`, err);
+        }
+      }
+      updateProgress(95,"Erstelle GIF...");
+      createGif(frames);
+    }
+
+  } catch(e){
+    showError("Unerwarteter Fehler: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Kunstwerk generieren";
+    updateProgress(0,"");
+  }
+}
+
 
     // ====================== ULTRA-STABILER ANALYSE-LOOP ======================
     for (let i = 0; i < tokens.length; i++) {
@@ -319,4 +381,5 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
