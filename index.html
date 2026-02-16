@@ -281,57 +281,6 @@ async function startGeneration(){
 }
 
 
-    // ====================== ULTRA-STABILER ANALYSE-LOOP ======================
-    for (let i = 0; i < tokens.length; i++) {
-      updateProgress(Math.floor((i + 1) / tokens.length * 100), "Analysiere NFT-Bilder...", `Analysiere ${i + 1}/${tokens.length}`);
-      await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
-
-      try {
-        const token = tokens[i] || {};
-        const meta = token.metadata || {};
-        const imageUrl = meta.displayUri || meta.artifactUri || token.image;
-
-        if (!imageUrl) {
-          console.warn(`NFT ${i + 1} hat keine Bild-URL, wird übersprungen.`);
-          continue; // überspringt fehlerhafte NFTs
-        }
-
-        // Optional: Farb-/Inhaltsanalyse hier einfügen
-        // await analyzeImage(imageUrl);
-
-      } catch (err) {
-        console.warn(`NFT ${i + 1} konnte nicht analysiert werden:`, err);
-        continue; // Fehler ignorieren und weitermachen
-      }
-    }
-
-    updateProgress(40, "Extrahiere Stilmerkmale...");
-    const prompt = createAdvancedPrompt(tokens);
-
-    if (currentMode === "image") {
-      updateProgress(70, "Generiere Bild...");
-      const img = await generateImageUrl(prompt);
-      displayResult(img);
-    } else {
-      updateProgress(60, "Generiere Frames...");
-      let frames = [];
-      for (let i = 0; i < 4; i++) {
-        frames.push(await generateImageUrl(prompt + ", Variation " + i));
-      }
-      updateProgress(95, "Erstelle GIF...");
-      createGif(frames);
-    }
-
-  } catch (e) {
-    console.error(e);
-    showError("Fehler: " + (e.message || "Unerwarteter Fehler"));
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "Kunstwerk generieren";
-  }
-}
-
-
 // ====================== PROMPT-FUNKTION ======================
 function createAdvancedPrompt(tokens){
   let textData="";
@@ -381,5 +330,6 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
