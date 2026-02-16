@@ -12,7 +12,6 @@
 
 @keyframes blink-red {0%,50%,100%{opacity:1;transform:scale(1);}25%,75%{opacity:0.3;transform:scale(0.98);}}
 .error-blink{animation:blink-red 0.6s ease-in-out 2;}
-/* kleine Fortschrittsanzeige während Analyse */
 #analyzeProgress {
   font-size: 0.85rem;
   color: #4f46e5; /* indigo-600 */
@@ -139,33 +138,7 @@ function showError(msg){
   document.getElementById('statusArea').classList.add('hidden');
 }
 
-async function startGeneration(){
-  let input=document.getElementById('artistUrl').value.trim();
-  const btn=document.getElementById('generateBtn');
-  document.getElementById('resultArea').classList.add('hidden');
-  document.getElementById('errorArea').classList.add('hidden');
-
-  if(!input){showError("Bitte Link oder Adresse eingeben.");return;}
-
-  input=input.replace(/\/$/,"");
-  let parts=input.split('/');
-  let address=parts.pop();
-
-  if(!address.startsWith("tz") && !address.startsWith("KT")){
-    showError("Ungültige Adresse.");
-    return;
-  }
-
-  btn.disabled=true;
-  btn.innerText="Verarbeite...";
-
-  try{
-    updateProgress(0,"Analysiere Artist...");
-    const tokens=await fetchObjktData(address);
-
-    updateProgress(0,"Analysiere NFT-Bilder...");
-
-// ====================== FETCH ======================
+// ====================== ULTRA-STABILES FETCH ======================
 async function fetchObjktData(address){
   try {
     const response = await fetch("/api/objkt", {
@@ -182,43 +155,90 @@ async function fetchObjktData(address){
     const json = await response.json();
     const tokens = Array.isArray(json.tokens) ? json.tokens : [];
 
-    if (!tokens.length) {
+    return tokens; // leer, wenn nichts da
+  } catch (e) {
+    console.warn("fetchObjktData Fehler:", e);
+    return []; // Fehler ignorieren
+  }
+}
+
+// ====================== ULTRA-STABILER ANALYSE-LOOP ======================
+async function analyzeTokens(tokens){
+  for (let i = 0; i < tokens.length; i++) {
+    updateProgress(Math.floor((i + 1) / tokens.length * 100), `Analysiere NFT-Bilder...`, `Analysiere ${i+1}/${tokens.length}`);
+    await new Promise(r => setTimeout(r, 50));
+
+    try {
+      const token = tokens[i] || {};
+      const meta = token.metadata || {};
+      const imageUrl = meta.displayUri || meta.artifactUri || token.image;
+      if(!imageUrl) continue;
+      // Optional: Analyse-Funktionen hier
+      // await analyzeImage(imageUrl);
+    } catch(err){
+      console.warn(`NFT ${i+1} konnte nicht analysiert werden:`, err);
+      continue;
+    }
+  }
+}
+
+// ====================== START GENERATION ======================
+async function startGeneration(){
+  let input = document.getElementById('artistUrl').value.trim();
+  const btn = document.getElementById('generateBtn');
+  document.getElementById('resultArea').classList.add('hidden');
+  document.getElementById('errorArea').classList.add('hidden');
+
+  if(!input){ showError("Bitte Link oder Adresse eingeben."); return; }
+
+  input = input.replace(/\/$/,"");
+  let parts = input.split('/');
+  let address = parts.pop();
+
+  if(!address.startsWith("tz") && !address.startsWith("KT")){
+    showError("Ungültige Adresse.");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = "Verarbeite...";
+
+  try{
+    updateProgress(0,"Analysiere Artist...");
+    const tokens = await fetchObjktData(address);
+
+    if(tokens.length === 0){
       throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
     }
 
-    return tokens;
+    await analyzeTokens(tokens);
 
-  } catch (e) {
-    console.warn("fetchObjktData Fehler:", e);
-    return []; // Fehler ignorieren, return leeres Array statt undefined
-  }
-}
+    updateProgress(40,"Extrahiere Stilmerkmale...");
+    const prompt = createAdvancedPrompt(tokens);
 
-// ====================== ANALYSE-LOOP ======================
-for (let i = 0; i < tokens.length; i++) {
-  updateProgress(Math.floor((i + 1) / tokens.length * 100), `Analysiere ${i+1}/${tokens.length}`);
-  await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
-
-  try {
-    const token = tokens[i] || {};
-    const meta = token.metadata || {};
-    const imageUrl = meta.displayUri || meta.artifactUri || token.image;
-
-    if (!imageUrl) {
-      console.warn(`NFT ${i+1} hat keine Bild-URL, wird übersprungen.`);
-      continue; // überspringt fehlerhafte NFTs
+    if(currentMode==="image"){
+      updateProgress(70,"Generiere Bild...");
+      const img = await generateImageUrl(prompt);
+      displayResult(img);
+    } else {
+      updateProgress(60,"Generiere Frames...");
+      let frames = [];
+      for(let i=0;i<4;i++){
+        frames.push(await generateImageUrl(prompt+", Variation "+i));
+      }
+      updateProgress(95,"Erstelle GIF...");
+      createGif(frames);
     }
 
-    // Optional: hier könntest du Farb-/Inhaltsanalyse einfügen
-    // await analyzeImage(imageUrl);
-
-  } catch (err) {
-    console.warn(`NFT ${i+1} konnte nicht analysiert werden:`, err);
-    continue; // Fehler ignorieren und weitermachen
+  } catch(e){
+    showError("Fehler: "+e.message);
+  } finally {
+    btn.disabled=false;
+    btn.innerText="Kunstwerk generieren";
   }
 }
 
-// ====================== PROMPT  FUNKTION ======================
+// ====================== PROMPT-FUNKTION ======================
 function createAdvancedPrompt(tokens){
   let textData="";
   tokens.forEach(t=>{
@@ -229,6 +249,7 @@ function createAdvancedPrompt(tokens){
   return `Hochwertiges, einzigartiges digitales Kunstwerk, inspiriert durch die visuelle Sprache von ${textData}, abstrakte Komposition, künstlerische Textur, einzigartig, transformativ, kein Text, kein Logo`;
 }
 
+// ====================== GENERATE IMAGE / GIF ======================
 async function generateImageUrl(prompt){
   const seed=Math.floor(Math.random()*999999);
   const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&nologo=true`;
@@ -266,8 +287,3 @@ function displayResult(source){
 </script>
 </body>
 </html>
-
-
-
-
-
