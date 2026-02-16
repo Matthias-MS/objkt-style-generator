@@ -1,4 +1,4 @@
-import fetch from "node-fetch"; // falls Node.js <18
+import fetch from "node-fetch"; // falls Node 18+, fetch ist global verfügbar, sonst import
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Nur POST erlaubt" });
@@ -7,33 +7,45 @@ export default async function handler(req, res) {
   if (!address) return res.status(400).json({ error: "Keine Adresse übermittelt" });
 
   try {
-    const url = `https://objkt.com/users/${address}`;
-    const response = await fetch(url);
-    if (!response.ok) return res.status(502).json({ error: "Objkt Profil nicht erreichbar" });
+    // 1. Hole die Seite des Artists
+    const profileUrl = `https://objkt.com/users/${address}`;
+    const htmlResponse = await fetch(profileUrl);
+    if (!htmlResponse.ok) return res.status(502).json({ error: "Objkt-Seite nicht erreichbar" });
 
-    const html = await response.text();
+    const html = await htmlResponse.text();
 
-    // Nur Created NFTs auslesen
-    // Suche nach JSON in HTML, das NFT-Infos enthält
-    const createdMatch = html.match(/"created":(\[.*?\]),"owned"/s);
-    if (!createdMatch) return res.status(404).json({ error: "Keine Created NFTs gefunden." });
+    // 2. Suche nach JSON-Daten für die „Created“ NFTs
+    const match = html.match(/window\.__PRELOADED_STATE__\s*=\s*(\{.*?\});/s);
+    if (!match) return res.status(404).json({ error: "Keine Daten von Objkt erhalten." });
 
-    let tokens = [];
-    try {
-      tokens = JSON.parse(createdMatch[1]);
-    } catch (err) {
-      return res.status(500).json({ error: "NFT-Daten konnten nicht geparsed werden." });
+    const stateJson = JSON.parse(match[1]);
+
+    // 3. Extrahiere nur „Created“ NFTs
+    let createdTokens = [];
+    if (stateJson.user && stateJson.user.collections) {
+      for (const col of stateJson.user.collections) {
+        if (col.tokens && Array.isArray(col.tokens)) {
+          createdTokens = createdTokens.concat(col.tokens);
+        }
+      }
     }
 
-    // Filter: nur Objekte mit Bild-URL
-    tokens = tokens.filter(t => t.metadata?.displayUri || t.metadata?.artifactUri || t.image);
+    if (!createdTokens.length) return res.status(404).json({ error: "Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab." });
 
-    if (!tokens.length) return res.status(404).json({ error: "Keine NFT-Bilder gefunden." });
+    // 4. Optional: nur relevante Felder zurückgeben
+    const tokens = createdTokens.map(t => ({
+      name: t.name || "",
+      description: t.description || "",
+      image: t.displayUri || t.artifactUri || "",
+      metadata: t.metadata || {},
+      tags: t.tags || []
+    }));
 
-    res.status(200).json({ tokens });
-  } catch (err) {
-    console.error("API Fehler:", err);
-    res.status(500).json({ error: "Unerwarteter Fehler im Server: " + err.message });
+    return res.status(200).json({ tokens });
+
+  } catch (e) {
+    console.error("API Fehler:", e);
+    return res.status(500).json({ error: "Objkt API konnte nicht erreicht werden: " + e.message });
   }
 }
 
