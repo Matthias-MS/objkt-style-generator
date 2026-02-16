@@ -165,74 +165,57 @@ async function startGeneration(){
 
     updateProgress(0,"Analysiere NFT-Bilder...");
 
+// ====================== FETCH ======================
+async function fetchObjktData(address){
+  try {
+    const response = await fetch("/api/objkt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(()=>null);
+      throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
+    }
+
+    const json = await response.json();
+    const tokens = Array.isArray(json.tokens) ? json.tokens : [];
+
+    if (!tokens.length) {
+      throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
+    }
+
+    return tokens;
+
+  } catch (e) {
+    console.warn("fetchObjktData Fehler:", e);
+    return []; // Fehler ignorieren, return leeres Array statt undefined
+  }
+}
+
 // ====================== ANALYSE-LOOP ======================
 for (let i = 0; i < tokens.length; i++) {
   updateProgress(Math.floor((i + 1) / tokens.length * 100), `Analysiere ${i+1}/${tokens.length}`);
   await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
 
   try {
-    // Prüfen ob Bild vorhanden
-    const imageUrl = tokens[i]?.metadata?.displayUri || tokens[i]?.metadata?.artifactUri || tokens[i]?.image;
+    const token = tokens[i] || {};
+    const meta = token.metadata || {};
+    const imageUrl = meta.displayUri || meta.artifactUri || token.image;
+
     if (!imageUrl) {
       console.warn(`NFT ${i+1} hat keine Bild-URL, wird übersprungen.`);
       continue; // überspringt fehlerhafte NFTs
     }
 
-    // Optional: hier kannst du Analyse-Funktionen einfügen
+    // Optional: hier könntest du Farb-/Inhaltsanalyse einfügen
     // await analyzeImage(imageUrl);
 
   } catch (err) {
     console.warn(`NFT ${i+1} konnte nicht analysiert werden:`, err);
     continue; // Fehler ignorieren und weitermachen
   }
-}
-
-
-    updateProgress(40,"Extrahiere Stilmerkmale...");
-    const prompt=createAdvancedPrompt(tokens);
-
-    if(currentMode==="image"){
-      updateProgress(70,"Generiere Bild...");
-      const img=await generateImageUrl(prompt);
-      displayResult(img);
-    }else{
-      updateProgress(60,"Generiere Frames...");
-      let frames=[];
-      for(let i=0;i<4;i++){
-        frames.push(await generateImageUrl(prompt+", Variation "+i));
-      }
-      updateProgress(95,"Erstelle GIF...");
-      createGif(frames);
-    }
-
-  }catch(e){
-    showError("Fehler: "+e.message);
-  }
-  finally{
-    btn.disabled=false;
-    btn.innerText="Kunstwerk generieren";
-  }
-}
-
-// ====================== FETCH ÜBER API ======================
-async function fetchObjktData(address){
-  const response = await fetch("/api/objkt", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ address })
-  });
-
-  if(!response.ok){
-    const err = await response.json().catch(()=>null);
-    throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
-  }
-
-  const json = await response.json();
-  if(!json.tokens || json.tokens.length===0){
-    throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
-  }
-
-  return json.tokens;
 }
 
 // ====================== PROMPT  FUNKTION ======================
@@ -283,6 +266,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
