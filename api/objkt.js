@@ -1,69 +1,39 @@
+import fetch from "node-fetch"; // falls Node.js <18
+
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Nur POST erlaubt" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Nur POST erlaubt" });
 
   const { address } = req.body;
-  if (!address) {
-    return res.status(400).json({ error: "Keine Adresse übermittelt" });
-  }
+  if (!address) return res.status(400).json({ error: "Keine Adresse übermittelt" });
 
   try {
-    // TzKT: Nur Tokens, die vom Artist erstellt wurden
-    const url = `https://api.tzkt.io/v1/tokens?creator=${address}&limit=100`;
-
+    const url = `https://objkt.com/users/${address}`;
     const response = await fetch(url);
+    if (!response.ok) return res.status(502).json({ error: "Objkt Profil nicht erreichbar" });
 
-    if (!response.ok) {
-      return res.status(502).json({ error: "TzKT API nicht erreichbar. Bitte später erneut versuchen." });
+    const html = await response.text();
+
+    // Nur Created NFTs auslesen
+    // Suche nach JSON in HTML, das NFT-Infos enthält
+    const createdMatch = html.match(/"created":(\[.*?\]),"owned"/s);
+    if (!createdMatch) return res.status(404).json({ error: "Keine Created NFTs gefunden." });
+
+    let tokens = [];
+    try {
+      tokens = JSON.parse(createdMatch[1]);
+    } catch (err) {
+      return res.status(500).json({ error: "NFT-Daten konnten nicht geparsed werden." });
     }
 
-    const tokens = await response.json();
+    // Filter: nur Objekte mit Bild-URL
+    tokens = tokens.filter(t => t.metadata?.displayUri || t.metadata?.artifactUri || t.image);
 
-    if (!Array.isArray(tokens) || tokens.length === 0) {
-      return res.status(404).json({ error: "Keine Tokens gefunden." });
-    }
+    if (!tokens.length) return res.status(404).json({ error: "Keine NFT-Bilder gefunden." });
 
-    // IPFS in HTTP umwandeln
-    function ipfsToHttp(uri) {
-      if (!uri) return null;
-      if (uri.startsWith("ipfs://")) {
-        return uri.replace("ipfs://", "https://ipfs.io/ipfs/");
-      }
-      return uri;
-    }
-
-    const createdNFTs = tokens
-      .filter(t => t.metadata)
-      .map(t => {
-        const image =
-          ipfsToHttp(t.metadata.displayUri) ||
-          ipfsToHttp(t.metadata.artifactUri) ||
-          ipfsToHttp(t.metadata.thumbnailUri);
-
-        if (!image) return null;
-
-        return {
-          name: t.metadata.name || "",
-          description: t.metadata.description || "",
-          image,
-          tags: Array.isArray(t.metadata.tags) ? t.metadata.tags : []
-        };
-      })
-      .filter(Boolean);
-
-    if (createdNFTs.length === 0) {
-      return res.status(404).json({
-        error: "Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Metadaten fehlen."
-      });
-    }
-
-    return res.status(200).json({ tokens: createdNFTs });
-
-  } catch (e) {
-    return res.status(500).json({
-      error: "Fehler beim Abrufen der NFTs: " + e.message
-    });
+    res.status(200).json({ tokens });
+  } catch (err) {
+    console.error("API Fehler:", err);
+    res.status(500).json({ error: "Unerwarteter Fehler im Server: " + err.message });
   }
 }
 
