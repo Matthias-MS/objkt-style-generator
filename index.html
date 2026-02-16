@@ -162,7 +162,7 @@ displayResult(img);
 updateProgress(60,"Generiere Frames...");
 let frames=[];
 for(let i=0;i<4;i++){
-frames.push(await generateImageUrl(prompt+", variation "+i));
+frames.push(await generateImageUrl(prompt+", Variation "+i));
 }
 updateProgress(95,"Erstelle GIF...");
 createGif(frames);
@@ -179,30 +179,10 @@ btn.innerText="Kunstwerk generieren";
 
 // ====================== FETCH ÜBER VERCEL-PROXY ======================
 async function fetchObjktData(address){
-let query;
-
-if(address.startsWith("KT")){
-query=`query($address:String!){
-token(where:{fa_contract:{_eq:$address}},limit:15){
-name description metadata tags
-}}`;
-}else{
-query=`query($address:String!){
-token(where:{
-_or:[
-{creator_id:{_eq:$address}},
-{issuer:{_eq:$address}},
-{minter:{_eq:$address}}
-]},limit:15){
-name description metadata tags
-}}`;
-}
-
-// Proxy URL: ruft unsere Vercel-Function auf /api/objkt
 const response=await fetch("/api/objkt",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({query,variables:{address}})
+body:JSON.stringify({ address })
 });
 
 if(!response.ok){
@@ -210,16 +190,15 @@ throw new Error("Objkt API nicht erreichbar. Bitte später erneut versuchen.");
 }
 
 const json=await response.json();
-if(!json.data){
+if(!json.tokens){
 throw new Error("Keine Daten von Objkt erhalten. Eventuell falsche Adresse oder CORS-Problem.");
 }
 
-const tokenArray=Object.values(json.data)[0];
-if(!tokenArray || tokenArray.length===0){
+if(!json.tokens || json.tokens.length===0){
 throw new Error("Keine Werke gefunden. Eventuell reiner Collector oder Collab.");
 }
 
-return tokenArray;
+return json.tokens;
 }
 
 // ====================== PROMPT-FUNKTION ======================
@@ -237,7 +216,7 @@ if(meta && meta.tags){textData+=meta.tags.join(" ")+" ";}
 }
 });
 textData=textData.toLowerCase().replace(/[^\w\s]/g,"").split(/\s+/).filter(w=>w.length>3).slice(0,40).join(", ");
-return `High quality contemporary digital artwork, inspired by the visual language of ${textData}, abstract composition, artistic texture, unique, transformative, no text, no logo`;
+return `Hochwertiges, einzigartiges digitales Kunstwerk, inspiriert durch die visuelle Sprache von ${textData}, abstrakte Komposition, künstlerische Textur, einzigartig, transformativ, kein Text, kein Logo`;
 }
 
 async function generateImageUrl(prompt){
@@ -275,6 +254,5 @@ document.body.removeChild(link);
 };
 }
 </script>
-
 </body>
 </html>
