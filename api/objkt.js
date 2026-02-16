@@ -1,51 +1,44 @@
-import fetch from "node-fetch"; // falls Node 18+, fetch ist global verfügbar, sonst import
-
+// api/objkt.js
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Nur POST erlaubt" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Nur POST erlaubt" });
+  }
 
   const { address } = req.body;
   if (!address) return res.status(400).json({ error: "Keine Adresse übermittelt" });
 
   try {
-    // 1. Hole die Seite des Artists
-    const profileUrl = `https://objkt.com/users/${address}`;
-    const htmlResponse = await fetch(profileUrl);
-    if (!htmlResponse.ok) return res.status(502).json({ error: "Objkt-Seite nicht erreichbar" });
+    // 1. Alle "Created" NFTs vom TzKT REST API Endpoint abrufen
+    // Limit auf 50 (du kannst höher setzen, wenn nötig)
+    const url = `https://api.tzkt.io/v1/tokens/balances?account=${address}&token.standard=fa2&balance.gt=0&limit=50`;
 
-    const html = await htmlResponse.text();
-
-    // 2. Suche nach JSON-Daten für die „Created“ NFTs
-    const match = html.match(/window\.__PRELOADED_STATE__\s*=\s*(\{.*?\});/s);
-    if (!match) return res.status(404).json({ error: "Keine Daten von Objkt erhalten." });
-
-    const stateJson = JSON.parse(match[1]);
-
-    // 3. Extrahiere nur „Created“ NFTs
-    let createdTokens = [];
-    if (stateJson.user && stateJson.user.collections) {
-      for (const col of stateJson.user.collections) {
-        if (col.tokens && Array.isArray(col.tokens)) {
-          createdTokens = createdTokens.concat(col.tokens);
-        }
-      }
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(502).json({ error: "TzKT API nicht erreichbar. Bitte später erneut versuchen." });
     }
 
-    if (!createdTokens.length) return res.status(404).json({ error: "Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab." });
+    const data = await response.json();
 
-    // 4. Optional: nur relevante Felder zurückgeben
-    const tokens = createdTokens.map(t => ({
-      name: t.name || "",
-      description: t.description || "",
-      image: t.displayUri || t.artifactUri || "",
-      metadata: t.metadata || {},
-      tags: t.tags || []
-    }));
+    // 2. Nur Tokens herausfiltern, die der Adresse gehören UND created wurden
+    // TzKT liefert 'token.metadata' und 'token.contract.address' usw.
+    const tokens = data
+      .filter(item => item.token?.creator?.address === address) // nur vom Artist erstellte NFTs
+      .map(item => ({
+        name: item.token?.metadata?.name || "",
+        description: item.token?.metadata?.description || "",
+        image: item.token?.metadata?.displayUri || item.token?.metadata?.artifactUri || "",
+        metadata: item.token?.metadata || {}
+      }));
 
+    if (!tokens.length) {
+      return res.status(404).json({ error: "Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab." });
+    }
+
+    // 3. Erfolgreich zurückgeben
     return res.status(200).json({ tokens });
 
-  } catch (e) {
-    console.error("API Fehler:", e);
-    return res.status(500).json({ error: "Objkt API konnte nicht erreicht werden: " + e.message });
+  } catch (err) {
+    console.error("objkt.js Fehler:", err);
+    return res.status(500).json({ error: "Unerwarteter Fehler bei der NFT-Abfrage." });
   }
 }
-
