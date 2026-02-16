@@ -184,100 +184,82 @@ async function analyzeTokens(tokens){
 
 // ====================== START GENERATION ======================
 async function startGeneration() {
-  const btn = document.getElementById('generateBtn');
   let input = document.getElementById('artistUrl').value.trim();
+  const btn = document.getElementById('generateBtn');
   document.getElementById('resultArea').classList.add('hidden');
   document.getElementById('errorArea').classList.add('hidden');
 
   if (!input) { showError("Bitte Link oder Adresse eingeben."); return; }
 
-  input = input.replace(/\/$/,"");
+  input = input.replace(/\/$/, "");
   let parts = input.split('/');
   let address = parts.pop();
 
-  if(!address.startsWith("tz") && !address.startsWith("KT")){
-    showError("Ungültige Adresse."); return;
+  if (!address.startsWith("tz") && !address.startsWith("KT")) {
+    showError("Ungültige Adresse.");
+    return;
   }
 
   btn.disabled = true;
   btn.innerText = "Verarbeite...";
 
   try {
-    updateProgress(0,"Analysiere Artist...");
-    let tokens = [];
+    updateProgress(0, "Analysiere Artist...");
 
-    // ===== Fetch NFTs über Webscraping API =====
-    try {
-      const response = await fetch("/api/objkt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address })
-      });
+    // Hol die Tokens über deinen API-Endpunkt (Webscraping)
+    let tokens = await fetchObjktData(address);
 
-      if (response.ok) {
-        const json = await response.json();
-        tokens = Array.isArray(json.tokens) ? json.tokens : [];
-      } else {
-        console.warn("Objkt Fetch nicht ok:", response.status);
-      }
-    } catch (e) {
-      console.warn("fetchObjktData Fehler:", e);
+    if (!tokens || tokens.length === 0) {
+      throw new Error("Keine NFT-Bilder gefunden oder API nicht erreichbar.");
     }
 
-    if (!tokens.length) {
-      showError("Keine NFT-Bilder gefunden oder API nicht erreichbar.");
-      return;
-    }
-
-    // ===== Ultra-stabiler Analyse Loop =====
-    for (let i=0;i<tokens.length;i++){
-      updateProgress(Math.floor((i+1)/tokens.length*100),
-                     "Analysiere NFT-Bilder...",
-                     `Analysiere ${i+1}/${tokens.length}`);
-      await new Promise(r=>setTimeout(r,50));
+    // ====================== ULTRA-STABILER ANALYSE-LOOP ======================
+    for (let i = 0; i < tokens.length; i++) {
+      updateProgress(Math.floor((i + 1) / tokens.length * 100), "Analysiere NFT-Bilder...", `Analysiere ${i + 1}/${tokens.length}`);
+      await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
 
       try {
         const token = tokens[i] || {};
         const meta = token.metadata || {};
         const imageUrl = meta.displayUri || meta.artifactUri || token.image;
-        if (!imageUrl) continue; // überspringt fehlerhafte NFTs
 
-        // Optional: hier könntest du Bildanalyse einfügen
-      } catch(err){
-        console.warn(`NFT ${i+1} Analyse Fehler:`, err);
-        continue;
+        if (!imageUrl) {
+          console.warn(`NFT ${i + 1} hat keine Bild-URL, wird übersprungen.`);
+          continue; // überspringt fehlerhafte NFTs
+        }
+
+        // Optional: hier könntest du Farb-/Inhaltsanalyse einfügen
+        // await analyzeImage(imageUrl);
+
+      } catch (err) {
+        console.warn(`NFT ${i + 1} konnte nicht analysiert werden:`, err);
+        continue; // Fehler ignorieren und weitermachen
       }
     }
 
-    updateProgress(40,"Extrahiere Stilmerkmale...");
+    updateProgress(40, "Extrahiere Stilmerkmale...");
     const prompt = createAdvancedPrompt(tokens);
 
-    if(currentMode==="image"){
-      updateProgress(70,"Generiere Bild...");
+    if (currentMode === "image") {
+      updateProgress(70, "Generiere Bild...");
       const img = await generateImageUrl(prompt);
       displayResult(img);
     } else {
-      updateProgress(60,"Generiere Frames...");
-      let frames=[];
-      for(let i=0;i<4;i++){
-        try {
-          frames.push(await generateImageUrl(prompt+", Variation "+i));
-        } catch(err){
-          console.warn(`Frame ${i} konnte nicht generiert werden:`, err);
-        }
+      updateProgress(60, "Generiere Frames...");
+      let frames = [];
+      for (let i = 0; i < 4; i++) {
+        frames.push(await generateImageUrl(prompt + ", Variation " + i));
       }
-      updateProgress(95,"Erstelle GIF...");
+      updateProgress(95, "Erstelle GIF...");
       createGif(frames);
     }
 
-  } catch(e){
-    console.error("startGeneration Fehler:", e);
-    const msg = e?.message || JSON.stringify(e) || "Unbekannter Fehler";
-    showError("Unerwarteter Fehler: " + msg);
+  } catch (e) {
+    showError("Unerwarteter Fehler: " + (e?.message || "undefined"));
   } finally {
     btn.disabled = false;
     btn.innerText = "Kunstwerk generieren";
-    updateProgress(0,"");
+    document.getElementById('analyzeProgress').classList.add('hidden');
   }
 }
 
@@ -330,6 +312,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
