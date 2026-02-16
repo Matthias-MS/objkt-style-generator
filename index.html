@@ -180,10 +180,10 @@ btn.innerText="Kunstwerk generieren";
 // ====================== FETCH ÜBER VERCEL-PROXY ======================
 async function fetchObjktData(address){
 
-const response = await fetch("/api/objkt",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body: JSON.stringify({ address })   // <<< NUR address senden!
+const response = await fetch("/api/objkt", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ address })
 });
 
 if(!response.ok){
@@ -259,5 +259,6 @@ document.body.removeChild(link);
 </script>
 </body>
 </html>
+
 
 
