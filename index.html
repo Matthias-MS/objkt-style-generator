@@ -178,25 +178,39 @@ btn.innerText="Kunstwerk generieren";
 }
 
 // ====================== FETCH ÜBER VERCEL-PROXY ======================
-async function fetchObjktData(address){
-  const response = await fetch("/api/objkt", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ address })
-  });
+// ====================== FETCH ÜBER VERCEL-PROXY ======================
+async function fetchObjktData(address) {
+  try {
+    const response = await fetch("/api/objkt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address })
+    });
 
-  if (!response.ok) {
-    const err = await response.json().catch(()=>null);
-    throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
+    // Prüfen, ob die HTTP-Antwort ok ist
+    if (!response.ok) {
+      let errJson = null;
+      try { errJson = await response.json(); } catch { }
+      throw new Error(errJson?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
+    }
+
+    const data = await response.json();
+
+    // Prüfen, ob Tokens existieren
+    if (!data.tokens) {
+      throw new Error("Keine Daten von Objkt erhalten. Eventuell falsche Adresse.");
+    }
+
+    if (!Array.isArray(data.tokens) || data.tokens.length === 0) {
+      throw new Error("Keine Werke gefunden. Eventuell reiner Collector oder Collab.");
+    }
+
+    return data.tokens;
+
+  } catch (e) {
+    // Alle Fehler sauber weiterwerfen
+    throw new Error(e.message || "Unbekannter Fehler beim Abrufen der Objkt-Daten.");
   }
-
-  const json = await response.json();
-
-  if (!json.tokens || json.tokens.length === 0) {
-    throw new Error("Keine Werke gefunden. Eventuell reiner Collector oder Collab.");
-  }
-
-  return json.tokens;
 }
 
 // ====================== PROMPT-FUNKTION ======================
@@ -255,6 +269,7 @@ document.body.removeChild(link);
 </body>
 </html>
 <!-- redeploy -->
+
 
 
 
