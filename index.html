@@ -177,40 +177,93 @@ btn.innerText="Kunstwerk generieren";
 }
 }
 
-// ====================== FETCH ÜBER VERCEL-PROXY ======================
-// ====================== FETCH ÜBER VERCEL-PROXY ======================
-async function fetchObjktData(address) {
-  try {
-    const response = await fetch("/api/objkt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address })
+// ====================== FETCH & ANALYSE ÜBER WEBSCRAPING ======================
+async function fetchObjktData(address){
+    const statusArea = document.getElementById('statusArea');
+    const statusText = document.getElementById('statusText');
+    const progressBar = document.getElementById('progressBar');
+    const percentText = document.getElementById('percentText');
+
+    // 1️⃣ Hole die HTML-Seite des Artists
+    let url = address.startsWith("KT") 
+        ? `https://objkt.com/asset/${address}` 
+        : `https://objkt.com/users/${address}`;
+
+    let htmlText;
+    try {
+        const resp = await fetch(url);
+        if(!resp.ok) throw new Error("Artist-Seite konnte nicht geladen werden.");
+        htmlText = await resp.text();
+    } catch(e){
+        throw new Error("Objkt Artist-Seite konnte nicht geladen werden: " + e.message);
+    }
+
+    // 2️⃣ Parse HTML und extrahiere alle Bild-URLs (NFT Cover)
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, "text/html");
+    // Objkt-Bilder: <img class="sc-..." src="https://...">
+    let imgElements = Array.from(doc.querySelectorAll("img"));
+    let imageUrls = imgElements
+        .map(img => img.src)
+        .filter(src => src.includes("ipfs") || src.includes("objkt.com/assets"));
+
+    if(imageUrls.length === 0){
+        throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
+    }
+
+    // 3️⃣ Analyse jedes Bildes (Farben, Motive) und Ladeprogress anzeigen
+    const tokens = [];
+    statusArea.classList.remove('hidden');
+
+    for(let i=0; i<imageUrls.length; i++){
+        const imgUrl = imageUrls[i];
+
+        // Update Ladebalken: z.B. Analysiere 3 / 40
+        statusText.innerText = `Analysiere ${i+1} / ${imageUrls.length}...`;
+        const percent = Math.floor(((i+1)/imageUrls.length)*100);
+        progressBar.style.width = percent + "%";
+        percentText.innerText = percent + "%";
+
+        try{
+            // Lade das Bild
+            const img = await loadImage(imgUrl);
+
+            // Dummy-Analyse: wir erzeugen ein paar Tags und Farben
+            // Du kannst später z.B. CLIP/SDXL-API hier integrieren
+            const analysis = await analyzeImage(img);
+            tokens.push({
+                name: `NFT ${i+1}`,
+                description: analysis.description,
+                metadata: { tags: analysis.tags },
+                tags: analysis.tags
+            });
+
+        } catch(e){
+            console.warn("Bild konnte nicht analysiert werden: ", imgUrl);
+        }
+    }
+
+    return tokens;
+}
+
+// Hilfsfunktion: Bild laden
+function loadImage(url){
+    return new Promise((resolve,reject)=>{
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = ()=>resolve(img);
+        img.onerror = reject;
+        img.src = url;
     });
+}
 
-    // Prüfen, ob die HTTP-Antwort ok ist
-    if (!response.ok) {
-      let errJson = null;
-      try { errJson = await response.json(); } catch { }
-      throw new Error(errJson?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
-    }
-
-    const data = await response.json();
-
-    // Prüfen, ob Tokens existieren
-    if (!data.tokens) {
-      throw new Error("Keine Daten von Objkt erhalten. Eventuell falsche Adresse.");
-    }
-
-    if (!Array.isArray(data.tokens) || data.tokens.length === 0) {
-      throw new Error("Keine Werke gefunden. Eventuell reiner Collector oder Collab.");
-    }
-
-    return data.tokens;
-
-  } catch (e) {
-    // Alle Fehler sauber weiterwerfen
-    throw new Error(e.message || "Unbekannter Fehler beim Abrufen der Objkt-Daten.");
-  }
+// Dummy Analysefunktion: erzeugt zufällige Tags / Farben (ersetzbar durch echte KI Analyse)
+async function analyzeImage(img){
+    // Placeholder: kann durch CLIP, Tensorflow, SDXL API etc. ersetzt werden
+    const dummyTags = ["fantasy","abstract","vivid","colorful","digital","surreal"];
+    const description = "Stilistisch inspiriert von diesem NFT";
+    const tags = dummyTags.sort(()=>0.5-Math.random()).slice(0,3);
+    return { description, tags };
 }
 
 // ====================== PROMPT-FUNKTION ======================
@@ -269,6 +322,7 @@ document.body.removeChild(link);
 </body>
 </html>
 <!-- redeploy -->
+
 
 
 
