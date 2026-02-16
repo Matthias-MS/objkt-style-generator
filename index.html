@@ -179,11 +179,12 @@ btn.innerText="Kunstwerk generieren";
 
 // ====================== FETCH ÜBER VERCEL-PROXY ======================
 async function fetchObjktData(address){
-const response=await fetch("/api/objkt",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({ address })
+const response = await fetch("/api/objkt", {
+  method: "POST",
+  headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ address })
 });
+
 
 if(!response.ok){
 throw new Error("Objkt API nicht erreichbar. Bitte später erneut versuchen.");
@@ -256,3 +257,4 @@ document.body.removeChild(link);
 </script>
 </body>
 </html>
+
