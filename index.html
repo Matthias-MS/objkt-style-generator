@@ -6,7 +6,6 @@
 <title>Objkt Style AI Generator</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
-
 <style>
 @keyframes pulse-soft {0%,100%{opacity:1;}50%{opacity:0.7;}}
 .loading-pulse{animation:pulse-soft 2s infinite;}
@@ -15,7 +14,6 @@
 .error-blink{animation:blink-red 0.6s ease-in-out 2;}
 </style>
 </head>
-
 <body class="bg-gray-50 text-gray-900 font-sans min-h-screen">
 <div class="max-w-3xl mx-auto py-12 px-4">
 
@@ -102,229 +100,157 @@ Dieses Werk ist ein KI-generiertes Unikat, inspiriert durch die Metadaten des K�
 let currentMode='image';
 
 function setMode(mode){
-currentMode=mode;
-document.getElementById('modeImage').className = mode==='image' ? 
-"py-3 px-4 rounded-xl border-2 transition font-medium border-indigo-600 bg-indigo-50 text-indigo-700" :
-"py-3 px-4 rounded-xl border-2 transition font-medium border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200";
-document.getElementById('modeGif').className = mode==='gif' ? 
-"py-3 px-4 rounded-xl border-2 transition font-medium border-indigo-600 bg-indigo-50 text-indigo-700" :
-"py-3 px-4 rounded-xl border-2 transition font-medium border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200";
+  currentMode=mode;
+  document.getElementById('modeImage').className = mode==='image' ? 
+    "py-3 px-4 rounded-xl border-2 transition font-medium border-indigo-600 bg-indigo-50 text-indigo-700" :
+    "py-3 px-4 rounded-xl border-2 transition font-medium border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200";
+  document.getElementById('modeGif').className = mode==='gif' ? 
+    "py-3 px-4 rounded-xl border-2 transition font-medium border-indigo-600 bg-indigo-50 text-indigo-700" :
+    "py-3 px-4 rounded-xl border-2 transition font-medium border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200";
 }
 
 function updateProgress(percent,text){
-document.getElementById('statusArea').classList.remove('hidden');
-document.getElementById('progressBar').style.width=percent+'%';
-document.getElementById('percentText').innerText=percent+'%';
-document.getElementById('statusText').innerText=text;
+  document.getElementById('statusArea').classList.remove('hidden');
+  document.getElementById('progressBar').style.width=percent+'%';
+  document.getElementById('percentText').innerText=percent+'%';
+  document.getElementById('statusText').innerText=text;
 }
 
 function showError(msg){
-const err=document.getElementById('errorArea');
-err.innerText=msg;
-err.classList.remove('hidden','error-blink');
-void err.offsetWidth;
-err.classList.add('error-blink');
-document.getElementById('statusArea').classList.add('hidden');
+  const err=document.getElementById('errorArea');
+  err.innerText=msg;
+  err.classList.remove('hidden','error-blink');
+  void err.offsetWidth;
+  err.classList.add('error-blink');
+  document.getElementById('statusArea').classList.add('hidden');
 }
 
 async function startGeneration(){
-let input=document.getElementById('artistUrl').value.trim();
-const btn=document.getElementById('generateBtn');
-document.getElementById('resultArea').classList.add('hidden');
-document.getElementById('errorArea').classList.add('hidden');
+  let input=document.getElementById('artistUrl').value.trim();
+  const btn=document.getElementById('generateBtn');
+  document.getElementById('resultArea').classList.add('hidden');
+  document.getElementById('errorArea').classList.add('hidden');
 
-if(!input){showError("Bitte Link oder Adresse eingeben.");return;}
+  if(!input){showError("Bitte Link oder Adresse eingeben.");return;}
 
-input=input.replace(/\/$/,"");
-let parts=input.split('/');
-let address=parts.pop();
+  input=input.replace(/\/$/,"");
+  let parts=input.split('/');
+  let address=parts.pop();
 
-if(!address.startsWith("tz") && !address.startsWith("KT")){
-showError("Ungültige Adresse.");
-return;
+  if(!address.startsWith("tz") && !address.startsWith("KT")){
+    showError("Ungültige Adresse.");
+    return;
+  }
+
+  btn.disabled=true;
+  btn.innerText="Verarbeite...";
+
+  try{
+    updateProgress(0,"Analysiere Artist...");
+    const tokens=await fetchObjktData(address);
+
+    updateProgress(0,"Analysiere NFT-Bilder...");
+    // Analysiere jedes Bild für den Prompt
+    for(let i=0;i<tokens.length;i++){
+      updateProgress(Math.floor((i+1)/tokens.length*100), `Analysiere ${i+1}/${tokens.length}`);
+      await new Promise(r => setTimeout(r, 50)); // optional: kleine Verzögerung für Frontend-Update
+      // Hier könntest du noch Bildanalyse/Farb-/Inhaltsfeatures einbauen
+    }
+
+    updateProgress(40,"Extrahiere Stilmerkmale...");
+    const prompt=createAdvancedPrompt(tokens);
+
+    if(currentMode==="image"){
+      updateProgress(70,"Generiere Bild...");
+      const img=await generateImageUrl(prompt);
+      displayResult(img);
+    }else{
+      updateProgress(60,"Generiere Frames...");
+      let frames=[];
+      for(let i=0;i<4;i++){
+        frames.push(await generateImageUrl(prompt+", Variation "+i));
+      }
+      updateProgress(95,"Erstelle GIF...");
+      createGif(frames);
+    }
+
+  }catch(e){
+    showError("Fehler: "+e.message);
+  }
+  finally{
+    btn.disabled=false;
+    btn.innerText="Kunstwerk generieren";
+  }
 }
 
-btn.disabled=true;
-btn.innerText="Verarbeite...";
-
-try{
-updateProgress(15,"Analysiere Objkt...");
-const tokens=await fetchObjktData(address);
-
-updateProgress(40,"Extrahiere Stilmerkmale...");
-const prompt=createAdvancedPrompt(tokens);
-
-if(currentMode==="image"){
-updateProgress(70,"Generiere Bild...");
-const img=await generateImageUrl(prompt);
-displayResult(img);
-}else{
-updateProgress(60,"Generiere Frames...");
-let frames=[];
-for(let i=0;i<4;i++){
-frames.push(await generateImageUrl(prompt+", Variation "+i));
-}
-updateProgress(95,"Erstelle GIF...");
-createGif(frames);
-}
-
-}catch(e){
-showError("Fehler: "+e.message);
-}
-finally{
-btn.disabled=false;
-btn.innerText="Kunstwerk generieren";
-}
-}
-
-// ====================== FETCH & ANALYSE ÜBER WEBSCRAPING ======================
+// ====================== FETCH ÜBER VERCEL-PROXY ======================
 async function fetchObjktData(address){
-    const statusArea = document.getElementById('statusArea');
-    const statusText = document.getElementById('statusText');
-    const progressBar = document.getElementById('progressBar');
-    const percentText = document.getElementById('percentText');
+  const response = await fetch("/api/objkt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address })
+  });
 
-    // 1️⃣ Hole die HTML-Seite des Artists
-    let url = address.startsWith("KT") 
-        ? `https://objkt.com/asset/${address}` 
-        : `https://objkt.com/users/${address}`;
+  if (!response.ok) {
+    const err = await response.json().catch(()=>null);
+    throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
+  }
 
-    let htmlText;
-    try {
-        const resp = await fetch(url);
-        if(!resp.ok) throw new Error("Artist-Seite konnte nicht geladen werden.");
-        htmlText = await resp.text();
-    } catch(e){
-        throw new Error("Objkt Artist-Seite konnte nicht geladen werden: " + e.message);
-    }
+  const json = await response.json();
 
-    // 2️⃣ Parse HTML und extrahiere alle Bild-URLs (NFT Cover)
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlText, "text/html");
-    // Objkt-Bilder: <img class="sc-..." src="https://...">
-    let imgElements = Array.from(doc.querySelectorAll("img"));
-    let imageUrls = imgElements
-        .map(img => img.src)
-        .filter(src => src.includes("ipfs") || src.includes("objkt.com/assets"));
+  if (!json.tokens || json.tokens.length===0){
+    throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
+  }
 
-    if(imageUrls.length === 0){
-        throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
-    }
-
-    // 3️⃣ Analyse jedes Bildes (Farben, Motive) und Ladeprogress anzeigen
-    const tokens = [];
-    statusArea.classList.remove('hidden');
-
-    for(let i=0; i<imageUrls.length; i++){
-        const imgUrl = imageUrls[i];
-
-        // Update Ladebalken: z.B. Analysiere 3 / 40
-        statusText.innerText = `Analysiere ${i+1} / ${imageUrls.length}...`;
-        const percent = Math.floor(((i+1)/imageUrls.length)*100);
-        progressBar.style.width = percent + "%";
-        percentText.innerText = percent + "%";
-
-        try{
-            // Lade das Bild
-            const img = await loadImage(imgUrl);
-
-            // Dummy-Analyse: wir erzeugen ein paar Tags und Farben
-            // Du kannst später z.B. CLIP/SDXL-API hier integrieren
-            const analysis = await analyzeImage(img);
-            tokens.push({
-                name: `NFT ${i+1}`,
-                description: analysis.description,
-                metadata: { tags: analysis.tags },
-                tags: analysis.tags
-            });
-
-        } catch(e){
-            console.warn("Bild konnte nicht analysiert werden: ", imgUrl);
-        }
-    }
-
-    return tokens;
-}
-
-// Hilfsfunktion: Bild laden
-function loadImage(url){
-    return new Promise((resolve,reject)=>{
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = ()=>resolve(img);
-        img.onerror = reject;
-        img.src = url;
-    });
-}
-
-// Dummy Analysefunktion: erzeugt zufällige Tags / Farben (ersetzbar durch echte KI Analyse)
-async function analyzeImage(img){
-    // Placeholder: kann durch CLIP, Tensorflow, SDXL API etc. ersetzt werden
-    const dummyTags = ["fantasy","abstract","vivid","colorful","digital","surreal"];
-    const description = "Stilistisch inspiriert von diesem NFT";
-    const tags = dummyTags.sort(()=>0.5-Math.random()).slice(0,3);
-    return { description, tags };
+  return json.tokens;
 }
 
 // ====================== PROMPT-FUNKTION ======================
 function createAdvancedPrompt(tokens){
-let textData="";
-tokens.forEach(t=>{
-textData+=(t.name||"")+" ";
-textData+=(t.description||"")+" ";
-if(t.tags && Array.isArray(t.tags)){textData+=t.tags.join(" ")+" ";}
-if(t.metadata){
-try{
-let meta=typeof t.metadata==="string"?JSON.parse(t.metadata):t.metadata;
-if(meta && meta.tags){textData+=meta.tags.join(" ")+" ";}
-}catch{}
-}
-});
-textData=textData.toLowerCase().replace(/[^\w\s]/g,"").split(/\s+/).filter(w=>w.length>3).slice(0,40).join(", ");
-return `Hochwertiges, einzigartiges digitales Kunstwerk, inspiriert durch die visuelle Sprache von ${textData}, abstrakte Komposition, künstlerische Textur, einzigartig, transformativ, kein Text, kein Logo`;
+  let textData="";
+  tokens.forEach(t=>{
+    textData+=(t.name||"")+" ";
+    textData+=(t.description||"")+" ";
+    if(t.tags && Array.isArray(t.tags)){textData+=t.tags.join(" ")+" ";}
+  });
+  textData=textData.toLowerCase().replace(/[^\w\s]/g,"").split(/\s+/).filter(w=>w.length>3).slice(0,40).join(", ");
+  return `Hochwertiges, einzigartiges digitales Kunstwerk, inspiriert durch die visuelle Sprache von ${textData}, abstrakte Komposition, künstlerische Textur, einzigartig, transformativ, kein Text, kein Logo`;
 }
 
 async function generateImageUrl(prompt){
-const seed=Math.floor(Math.random()*999999);
-const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&nologo=true`;
+  const seed=Math.floor(Math.random()*999999);
+  const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&nologo=true`;
 
-await new Promise((res,rej)=>{
-const img=new Image();
-img.crossOrigin="anonymous";
-img.onload=res;
-img.onerror=rej;
-img.src=url;
-});
+  await new Promise((res,rej)=>{
+    const img=new Image();
+    img.crossOrigin="anonymous";
+    img.onload=res;
+    img.onerror=rej;
+    img.src=url;
+  });
 
-return url;
+  return url;
 }
 
 function createGif(images){
-gifshot.createGIF({images:images,gifWidth:512,gifHeight:512,interval:0.45,numFrames:4},function(obj){
-if(!obj.error){displayResult(obj.image);}else{showError("GIF-Erstellung fehlgeschlagen.");}
-});
+  gifshot.createGIF({images:images,gifWidth:512,gifHeight:512,interval:0.45,numFrames:4},function(obj){
+    if(!obj.error){displayResult(obj.image);}else{showError("GIF-Erstellung fehlgeschlagen.");}
+  });
 }
 
 function displayResult(source){
-updateProgress(100,"Fertig!");
-document.getElementById('resultImage').src=source;
-document.getElementById('resultArea').classList.remove('hidden');
-document.getElementById('downloadBtn').onclick=()=>{
-const link=document.createElement("a");
-link.href=source;
-link.download="mntg-style-"+Date.now()+".png";
-document.body.appendChild(link);
-link.click();
-document.body.removeChild(link);
-};
+  updateProgress(100,"Fertig!");
+  document.getElementById('resultImage').src=source;
+  document.getElementById('resultArea').classList.remove('hidden');
+  document.getElementById('downloadBtn').onclick=()=>{
+    const link=document.createElement("a");
+    link.href=source;
+    link.download="mntg-style-"+Date.now()+".png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 }
 </script>
 </body>
 </html>
-<!-- redeploy -->
-
-
-
-
-
-
