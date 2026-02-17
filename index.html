@@ -141,23 +141,22 @@ function showError(msg){
 // ====================== FETCH OBJKT DATA ======================
 async function fetchObjktData(address) {
   try {
-    const response = await fetch("/api/objkt", {
+    const res = await fetch("/api/objkt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ address })
     });
 
-    if (!response.ok) {
-      // Hole die Fehler‑Nachricht aus JSON
-      const errData = await response.json().catch(()=>null);
-      throw new Error(errData?.error || "Objkt Indexer API nicht erreichbar.");
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error || "Objkt API nicht erreichbar");
     }
 
-    const data = await response.json();
-    return Array.isArray(data.tokens) ? data.tokens : [];
-  } catch (e) {
-    console.warn("fetchObjktData Fehler:", e);
-    return []; // Fehler ignorieren → leerer Token‑Array
+    const json = await res.json();
+    return json.tokens || [];
+  } catch (err) {
+    console.warn("fetchObjktData Fehler:", err);
+    return [];
   }
 }
 
@@ -319,6 +318,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
