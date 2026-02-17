@@ -148,24 +148,19 @@ async function fetchObjktData(address) {
     });
 
     if (!response.ok) {
-      const err = await response.json().catch(() => null);
-      throw new Error(err?.error || "Objkt API nicht erreichbar.");
+      // Hole die Fehler‑Nachricht aus JSON
+      const errData = await response.json().catch(()=>null);
+      throw new Error(errData?.error || "Objkt Indexer API nicht erreichbar.");
     }
 
-    const json = await response.json();
-    // Sicherstellen: immer Array zurück
-    const tokens = Array.isArray(json.tokens) ? json.tokens : [];
-
-    if (!tokens.length) {
-      console.warn("Keine Created NFTs gefunden für diese Adresse.");
-    }
-
-    return tokens; // leeres Array, falls nichts da
-  } catch (err) {
-    console.warn("fetchObjktData Fehler:", err);
-    return []; // Fehler ignorieren, Frontend läuft weiter
+    const data = await response.json();
+    return Array.isArray(data.tokens) ? data.tokens : [];
+  } catch (e) {
+    console.warn("fetchObjktData Fehler:", e);
+    return []; // Fehler ignorieren → leerer Token‑Array
   }
 }
+
 
 // ======================  ANALYSE-LOOP ======================
 async function analyzeTokens(tokens){
@@ -317,6 +312,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
