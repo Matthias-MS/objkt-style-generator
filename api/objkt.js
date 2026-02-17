@@ -1,73 +1,39 @@
+// api/objkt.js
 import fetch from "node-fetch";
-import { JSDOM } from "jsdom";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { address } = req.body;
-
-  if (!address) {
-    return res.status(400).json({ error: "Adresse fehlt" });
-  }
-
   try {
-    const url = `https://objkt.com/users/${address}?tab=created`;
-
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        "Accept-Language": "en-US,en;q=0.9"
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error("Objkt-Seite konnte nicht geladen werden");
+    const { address } = req.body;
+    if (!address) {
+      return res.status(400).json({ error: "Keine Adresse angegeben" });
     }
 
-    const html = await response.text();
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    // TzKT API: NFTs created by user
+    const url = `https://api.tzkt.io/v1/tokens/balances?account=${address}&token.metadata.artifactUri.null=false&balance.gt=0&select=token`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("TzKT Indexer nicht erreichbar");
 
-    const tokens = [];
+    const tokensRaw = await response.json();
 
-    // Suche alle Bilder innerhalb von NFT-Karten
-    const images = document.querySelectorAll("img");
+    // Filter: nur Created NFTs, keine Kollektionen, keine Tokens ohne Bild
+    const tokens = tokensRaw
+      .map(t => t.token)
+      .filter(t => t.creator?.address === address) // created only
+      .filter(t => t.metadata && (t.metadata.displayUri || t.metadata.artifactUri));
 
-    images.forEach(img => {
-      const src = img.src;
-
-      if (!src) return;
-
-      // Nur echte NFT-Bilder von Objkt CDN
-      if (
-        src.includes("ipfs") ||
-        src.includes("objkt") ||
-        src.includes("cloudflare-ipfs")
-      ) {
-        tokens.push({
-          name: img.alt || "",
-          image: src,
-          description: img.alt || ""
-        });
-      }
-    });
-
-    // Duplikate entfernen
-    const uniqueTokens = Array.from(
-      new Map(tokens.map(t => [t.image, t])).values()
-    );
-
-    if (!uniqueTokens.length) {
+    if (tokens.length === 0) {
       return res.status(200).json({ tokens: [] });
     }
 
-    return res.status(200).json({ tokens: uniqueTokens });
-
-  } catch (error) {
-    console.error("Scraping Fehler:", error);
-    return res.status(500).json({ error: "Objkt Webscraping fehlgeschlagen" });
+    res.status(200).json({ tokens });
+  } catch (err) {
+    console.error("Objkt API Fehler:", err);
+    res.status(500).json({ error: "Keine NFT-Bilder gefunden oder API nicht erreichbar." });
   }
 }
+
 
