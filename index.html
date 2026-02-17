@@ -201,11 +201,20 @@ async function startGeneration() {
   btn.innerText = "Verarbeite...";
 
   try {
-    updateProgress(0, "Analysiere Artist...");
-    const tokens = await fetchObjktData(address);
+    updateProgress(0, "Lade NFTs...");
+
+    // Webscraping-Endpoint
+    const response = await fetch("/api/objkt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address })
+    });
+
+    const data = await response.json();
+    const tokens = Array.isArray(data.tokens) ? data.tokens : [];
 
     if (!tokens.length) {
-      throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
+      throw new Error("Keine NFT-Bilder gefunden oder API nicht erreichbar.");
     }
 
     // ====================== ULTRA-STABILER ANALYSE-LOOP ======================
@@ -216,24 +225,19 @@ async function startGeneration() {
         `Analysiere ${i + 1}/${tokens.length}`
       );
 
-      await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für Frontend-Update
+      await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
 
       try {
         const token = tokens[i] || {};
-        const meta = token.metadata || {};
-        const imageUrl = meta.displayUri || meta.artifactUri || token.image;
-
-        if (!imageUrl) {
-          console.warn(`NFT ${i + 1} hat keine Bild-URL, wird übersprungen.`);
-          continue; // Fehlerhafte Tokens überspringen
-        }
+        const imageUrl = token.image;
+        if (!imageUrl) continue; // überspringt Tokens ohne Bild
 
         // Optional: hier Bildanalyse/Farb-/Inhaltsfeatures einfügen
         // await analyzeImage(imageUrl);
 
       } catch (err) {
         console.warn(`NFT ${i + 1} konnte nicht analysiert werden:`, err);
-        continue; // Fehler ignorieren und weitermachen
+        continue;
       }
     }
 
@@ -315,6 +319,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
