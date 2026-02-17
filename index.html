@@ -276,15 +276,18 @@ function createAdvancedPrompt(tokens){
 
 // ====================== GENERATE IMAGE / GIF ======================
 async function generateImageUrl(prompt){
-  const seed=Math.floor(Math.random()*999999);
-  const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&nologo=true`;
+  const seed = Math.floor(Math.random() * 999999);
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&nologo=true`;
 
-  await new Promise((res,rej)=>{
-    const img=new Image();
-    img.crossOrigin="anonymous";
-    img.onload=res;
-    img.onerror=rej;
-    img.src=url;
+  await new Promise((res, rej) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = res;
+    img.onerror = (errEvent) => {
+      // errEvent ist ein Event, wir wandeln es in verständliche Fehlermeldung um
+      rej(new Error("Bild konnte nicht geladen werden: " + url));
+    };
+    img.src = url;
   });
 
   return url;
@@ -312,6 +315,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
