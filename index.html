@@ -162,7 +162,7 @@ async function fetchObjktData(address) {
 }
 
 
-// ======================  ANALYSE-LOOP ======================
+// ======================  ANALYSELOOP ======================
 async function analyzeTokens(tokens){
   for (let i = 0; i < tokens.length; i++) {
     updateProgress(Math.floor((i + 1) / tokens.length * 100), `Analysiere NFT-Bilder...`, `Analysiere ${i+1}/${tokens.length}`);
@@ -319,6 +319,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
