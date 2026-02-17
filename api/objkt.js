@@ -1,55 +1,42 @@
+// /api/objkt.js
 import fetch from "node-fetch";
-import { JSDOM } from "jsdom";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Nur POST erlaubt" });
   }
 
-  const { address } = req.body;
-  if (!address) {
-    return res.status(400).json({ error: "Keine Adresse übermittelt" });
-  }
-
   try {
-    // Objkt Künstlerseite
-    const url = `https://objkt.com/users/${address}`;
+    const { address } = req.body;
+    if (!address || (!address.startsWith("tz") && !address.startsWith("KT"))) {
+      return res.status(400).json({ error: "Ungültige Adresse" });
+    }
+
+    // TzKT Indexer API - nur Created NFTs (creator = address)
+    const url = `https://api.tzkt.io/v1/tokens/balances?account=${address}&token.standard=fa2&balance.gt=0&limit=1000`;
     const response = await fetch(url);
-    if (!response.ok) throw new Error("Objkt-Seite nicht erreichbar");
+    if (!response.ok) throw new Error("TzKT API nicht erreichbar");
 
-    const html = await response.text();
+    const balances = await response.json();
 
-    // Mit JSDOM parsen
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    // Nur NFTs, bei denen der creator die Adresse ist
+    const createdNFTs = balances
+      .filter(b => b.token?.metadata && b.token?.creator === address)
+      .map(b => ({
+        name: b.token.metadata.name || "",
+        description: b.token.metadata.description || "",
+        image: b.token.metadata.displayUri || b.token.metadata.artifactUri || "",
+        tags: b.token.metadata.tags || [],
+      }))
+      .filter(t => t.image); // nur mit Bild-URL
 
-    // Alle NFTs aus "Created" sammeln
-    const createdSection = Array.from(
-      document.querySelectorAll("div[id^='created'] a[href*='/objkt/']")
-    );
-
-    if (createdSection.length === 0) {
-      return res.status(404).json({ error: "Keine NFT-Bilder gefunden (Created leer)" });
+    if (createdNFTs.length === 0) {
+      return res.status(200).json({ tokens: [] });
     }
 
-    // Bild-URLs und Metadata extrahieren
-    const tokens = createdSection.map((a) => {
-      const img = a.querySelector("img");
-      return {
-        name: img?.alt || "NFT",
-        image: img?.src || null,
-      };
-    }).filter(t => t.image); // nur mit gültigem Bild
-
-    if (tokens.length === 0) {
-      return res.status(404).json({ error: "Keine NFT-Bilder gefunden" });
-    }
-
-    res.status(200).json({ tokens });
-
+    return res.status(200).json({ tokens: createdNFTs });
   } catch (err) {
-    console.error("Objkt Webscraping Fehler:", err);
-    res.status(500).json({ error: "Keine NFT-Bilder gefunden oder API nicht erreichbar" });
+    console.error("Objkt API Fehler:", err);
+    return res.status(500).json({ error: "Keine NFT-Bilder gefunden oder API nicht erreichbar." });
   }
 }
-
