@@ -138,8 +138,8 @@ function showError(msg){
   document.getElementById('statusArea').classList.add('hidden');
 }
 
-// ====================== FETCH! ======================
-async function fetchObjktData(address){
+// ====================== FETCH OBJKT DATA ======================
+async function fetchObjktData(address) {
   try {
     const response = await fetch("/api/objkt", {
       method: "POST",
@@ -148,17 +148,22 @@ async function fetchObjktData(address){
     });
 
     if (!response.ok) {
-      const err = await response.json().catch(()=>null);
-      throw new Error(err?.error || "Objkt API nicht erreichbar. Bitte später erneut versuchen.");
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.error || "Objkt API nicht erreichbar.");
     }
 
     const json = await response.json();
+    // Sicherstellen: immer Array zurück
     const tokens = Array.isArray(json.tokens) ? json.tokens : [];
 
-    return tokens; // leer, wenn nichts da
-  } catch (e) {
-    console.warn("fetchObjktData Fehler:", e);
-    return []; // Fehler ignorieren
+    if (!tokens.length) {
+      console.warn("Keine Created NFTs gefunden für diese Adresse.");
+    }
+
+    return tokens; // leeres Array, falls nichts da
+  } catch (err) {
+    console.warn("fetchObjktData Fehler:", err);
+    return []; // Fehler ignorieren, Frontend läuft weiter
   }
 }
 
@@ -312,6 +317,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
