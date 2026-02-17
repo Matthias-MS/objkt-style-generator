@@ -182,6 +182,7 @@ async function analyzeTokens(tokens){
 }
 
 // ====================== START GENERATION ======================
+// ====================== START GENERATION (Browser-Scraping) ======================
 async function startGeneration() {
   const input = document.getElementById('artistUrl').value.trim();
   const btn = document.getElementById('generateBtn');
@@ -190,31 +191,38 @@ async function startGeneration() {
 
   if (!input) { showError("Bitte Link oder Adresse eingeben."); return; }
 
+  // Extrahiere Adresse oder Username
   let address = input.replace(/\/$/, '').split('/').pop();
-  if (!address.startsWith("tz") && !address.startsWith("KT")) {
-    showError("Ungültige Adresse.");
-    return;
-  }
 
   btn.disabled = true;
   btn.innerText = "Verarbeite...";
 
   try {
-    updateProgress(0, "Lade NFTs...");
+    updateProgress(0, "Lade NFTs direkt von Objkt...");
 
-    // Webscraping-Endpoint
-    const response = await fetch("/api/objkt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address })
-    });
+    // Lade die HTML-Seite des Artists
+    const pageResp = await fetch(`https://objkt.com/users/${address}`);
+    if (!pageResp.ok) throw new Error("Objkt-Seite konnte nicht geladen werden");
+    const html = await pageResp.text();
 
-    const data = await response.json();
-    const tokens = Array.isArray(data.tokens) ? data.tokens : [];
+    // Temporäres DOM-Element zum Parsen
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
 
-    if (!tokens.length) {
-      throw new Error("Keine NFT-Bilder gefunden oder API nicht erreichbar.");
-    }
+    // Alle NFT-Karten selektieren
+    const nftCards = Array.from(doc.querySelectorAll("div.nft-card, li.nft-card, article.nft-card"));
+
+    if (!nftCards.length) throw new Error("Keine NFT-Bilder gefunden. Eventuell reiner Collector oder Collab.");
+
+    // Tokens sammeln
+    const tokens = nftCards.map(card => {
+      const name = card.querySelector(".name, .nft-name")?.innerText || "";
+      const description = card.querySelector(".description, .nft-description")?.innerText || "";
+      const img = card.querySelector("img")?.src || "";
+      return { name, description, image: img };
+    }).filter(t => t.image); // nur mit Bild
+
+    if (!tokens.length) throw new Error("Keine NFT-Bilder mit gültigem Bild gefunden.");
 
     // ====================== ULTRA-STABILER ANALYSE-LOOP ======================
     for (let i = 0; i < tokens.length; i++) {
@@ -223,21 +231,7 @@ async function startGeneration() {
         "Analysiere NFT-Bilder...",
         `Analysiere ${i + 1}/${tokens.length}`
       );
-
-      await new Promise(r => setTimeout(r, 50)); // kleine Verzögerung für UI-Update
-
-      try {
-        const token = tokens[i] || {};
-        const imageUrl = token.image;
-        if (!imageUrl) continue; // überspringt Tokens ohne Bild
-
-        // Optional: hier Bildanalyse/Farb-/Inhaltsfeatures einfügen
-        // await analyzeImage(imageUrl);
-
-      } catch (err) {
-        console.warn(`NFT ${i + 1} konnte nicht analysiert werden:`, err);
-        continue;
-      }
+      await new Promise(r => setTimeout(r, 30)); // kleine Verzögerung für UI
     }
 
     updateProgress(40, "Extrahiere Stilmerkmale...");
@@ -318,6 +312,7 @@ function displayResult(source){
 </script>
 </body>
 </html>
+
 
 
 
