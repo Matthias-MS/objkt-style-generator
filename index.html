@@ -7,84 +7,100 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
-        body { background-color: #f9fafb; color: #111827; }
-        .mntg-card { background: white; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); border: 1px solid #f3f4f6; }
-        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        .loading { animation: pulse-soft 2s infinite; }
-        .btn-black { background: #000; color: #fff; transition: all 0.2s; }
-        .btn-black:hover { background: #222; transform: translateY(-1px); }
-        .btn-black:active { transform: translateY(0); }
+        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .loading-pulse { animation: pulse-soft 2s infinite; }
+        @keyframes blink-red { 0%, 50%, 100% { opacity: 1; transform: scale(1); } 25%, 75% { opacity: 0.3; transform: scale(0.98); } }
+        .error-blink { animation: blink-red 0.6s ease-in-out 2; }
     </style>
 </head>
-<body class="font-sans min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen">
 
-    <div class="max-w-xl w-full">
-        <!-- Header -->
-        <header class="text-center mb-10">
-            <h1 class="text-3xl font-black tracking-tighter uppercase">Objkt Style Gen<span class="text-xs lowercase ml-1 font-normal opacity-40">by MNTG</span></h1>
-            <p class="text-gray-400 text-sm mt-1">Transformative KI-Kunst für alle.</p>
+    <div class="max-w-3xl mx-auto py-12 px-4">
+        <!-- Header - Original Style -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold tracking-tight mb-2">
+                Objkt Artist Style Gen<span class="align-super text-sm ml-1">by MNTG</span>
+            </h1>
+            <p class="text-gray-500">Erstelle transformative KI-Kunst basierend auf dem Stil eines Objkt-Artists.</p>
         </header>
 
-        <!-- Main UI -->
-        <div class="mntg-card p-6 md:p-8 space-y-6">
-            
-            <!-- Input -->
-            <div id="inputContainer">
-                <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Artist Link</label>
-                <input type="text" id="artistUrl" placeholder="https://objkt.com/users/..." 
-                    class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-black outline-none transition">
-            </div>
-
-            <!-- Manuelles Feld (Versteckt bis Fehler) -->
-            <div id="manualInputContainer" class="hidden animate-in fade-in duration-500">
-                <label class="block text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-2 italic">Blockchain blockiert - Gib Stil manuell ein:</label>
-                <input type="text" id="manualStyle" placeholder="z.B. Abstract, Cyberpunk, Oil Painting..." 
-                    class="w-full px-4 py-3 rounded-xl border border-orange-100 bg-orange-50 focus:bg-white outline-none transition">
-            </div>
-
-            <!-- Mode Selection -->
-            <div class="grid grid-cols-2 gap-3">
-                <button id="modeImage" onclick="setMode('image')" class="py-3 rounded-xl border-2 border-black font-bold text-sm bg-black text-white">Einzelbild</button>
-                <button id="modeGif" onclick="setMode('gif')" class="py-3 rounded-xl border-2 border-gray-100 font-bold text-sm text-gray-400 hover:border-gray-200 transition">GIF</button>
-            </div>
-
-            <button id="generateBtn" onclick="start()" class="btn-black w-full py-4 rounded-xl font-black text-lg shadow-xl uppercase tracking-widest">Generieren</button>
-
-            <!-- Status Area -->
-            <div id="statusArea" class="hidden space-y-3">
-                <div class="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
-                    <span id="statusText" class="text-gray-400 italic">Verarbeite...</span>
-                    <span id="percentText" class="text-black">0%</span>
+        <!-- Main Card -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-gray-100">
+            <div class="space-y-6">
+                
+                <!-- Blockchain Fallback Hinweis (nur bei Fehlern sichtbar) -->
+                <div id="manualInputContainer" class="hidden p-4 bg-orange-50 border border-orange-100 rounded-xl mb-4">
+                    <p class="text-xs font-bold text-orange-600 uppercase mb-2 italic">Blockchain-Sperre erkannt. Gib den Stil bitte manuell ein:</p>
+                    <input type="text" id="manualStyle" placeholder="z.B. Abstract, Oil Painting, Cyberpunk..." 
+                        class="w-full px-4 py-2 rounded-lg border border-orange-200 outline-none focus:ring-2 focus:ring-orange-500">
                 </div>
-                <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div id="progressBar" class="bg-black h-full transition-all duration-500" style="width: 0%"></div>
-                </div>
-            </div>
 
-            <!-- Result -->
-            <div id="resultArea" class="hidden pt-6 border-t border-gray-100 text-center animate-in fade-in">
-                <div class="relative group inline-block">
-                    <img id="resultImage" class="max-w-full rounded-xl shadow-lg mx-auto border border-white" src="">
-                    <div class="mt-4">
-                        <button id="downloadBtn" class="text-[10px] font-bold uppercase tracking-widest bg-gray-100 hover:bg-gray-200 px-6 py-2 rounded-lg transition">Download</button>
+                <!-- Input Group -->
+                <div id="standardInputContainer">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Objkt Artist Link oder Adresse</label>
+                    <input type="text" id="artistUrl" 
+                        placeholder="https://objkt.com/users/..." 
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                </div>
+
+                <!-- Mode Selection -->
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="modeImage" onclick="setMode('image')" 
+                        class="py-3 px-4 rounded-xl border-2 transition font-medium border-indigo-600 bg-indigo-50 text-indigo-700">
+                        Einzelbild
+                    </button>
+                    <button id="modeGif" onclick="setMode('gif')" 
+                        class="py-3 px-4 rounded-xl border-2 transition font-medium border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200">
+                        Animiertes GIF
+                    </button>
+                </div>
+
+                <!-- Generate Button -->
+                <button id="generateBtn" onclick="startGeneration()" 
+                    class="w-full bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition transform active:scale-[0.98]">
+                    Kunstwerk generieren
+                </button>
+
+                <!-- Status Area -->
+                <div id="statusArea" class="hidden">
+                    <div class="flex justify-between mb-2 text-sm font-medium">
+                        <span id="statusText">Initialisiere...</span>
+                        <span id="percentText">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                        <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div id="errorArea" class="hidden p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100 font-medium text-center"></div>
+
+                <!-- Result -->
+                <div id="resultArea" class="hidden mt-8 border-t pt-8 text-center">
+                    <h3 class="text-lg font-bold mb-4">Dein generiertes Werk:</h3>
+                    <img id="resultImage" src="" alt="Result" class="max-w-full rounded-lg shadow-lg border border-gray-200 mx-auto bg-white">
+                    <div class="mt-4 flex justify-center gap-4">
+                        <button id="downloadBtn" class="bg-gray-100 hover:bg-gray-200 px-6 py-2 rounded-lg font-semibold text-sm transition">
+                            Herunterladen
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <footer class="mt-10 text-center text-[10px] text-gray-300 uppercase tracking-widest leading-loose">
-            Keine Speicherung • Keine Kosten • Transformative Kunst<br>MNTG System • Resilient Engine Active
+        <footer class="mt-12 text-center text-xs text-gray-400 uppercase tracking-widest leading-relaxed">
+            Nutzt die Objkt API & Pollinations.ai (Open Source SDXL) • Kostenlose Webapp • Datenschutzkonform • by MNTG
         </footer>
     </div>
 
     <script>
         let currentMode = 'image';
-        const models = ['flux', 'turbo', 'flux-realism', 'any-dark'];
+        const aiModels = ['flux', 'turbo', 'flux-realism', 'any-dark'];
 
         function setMode(mode) {
             currentMode = mode;
-            document.getElementById('modeImage').className = mode === 'image' ? "py-3 rounded-xl border-2 border-black font-bold text-sm bg-black text-white" : "py-3 rounded-xl border-2 border-gray-100 font-bold text-sm text-gray-400 hover:border-gray-200 transition";
-            document.getElementById('modeGif').className = mode === 'gif' ? "py-3 rounded-xl border-2 border-black font-bold text-sm bg-black text-white" : "py-3 rounded-xl border-2 border-gray-100 font-bold text-sm text-gray-400 hover:border-gray-200 transition";
+            document.getElementById('modeImage').className = mode === 'image' ? "py-3 px-4 rounded-xl border-2 transition font-medium border-indigo-600 bg-indigo-50 text-indigo-700" : "py-3 px-4 rounded-xl border-2 transition font-medium border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200";
+            document.getElementById('modeGif').className = mode === 'gif' ? "py-3 px-4 rounded-xl border-2 transition font-medium border-indigo-600 bg-indigo-50 text-indigo-700" : "py-3 px-4 rounded-xl border-2 transition font-medium border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200";
         }
 
         function updateProgress(percent, text) {
@@ -94,7 +110,17 @@
             document.getElementById('statusText').innerText = text;
         }
 
-        async function start() {
+        function showError(msg) {
+            const err = document.getElementById('errorArea');
+            err.innerText = msg;
+            err.classList.remove('hidden', 'error-blink');
+            void err.offsetWidth; 
+            err.classList.add('error-blink');
+            document.getElementById('statusArea').classList.add('hidden');
+            document.getElementById('generateBtn').disabled = false;
+        }
+
+        async function startGeneration() {
             const urlInput = document.getElementById('artistUrl').value.trim();
             const manualInput = document.getElementById('manualStyle').value.trim();
             const btn = document.getElementById('generateBtn');
@@ -103,14 +129,14 @@
             if (!urlInput && !manualInput) return;
 
             btn.disabled = true;
-            btn.innerText = "Bitte warten...";
             resultArea.classList.add('hidden');
+            document.getElementById('errorArea').classList.add('hidden');
 
             try {
                 let keywords = manualInput || "Abstract Digital Art";
 
                 if (urlInput && !manualInput) {
-                    updateProgress(20, "Hole Blockchain Daten...");
+                    updateProgress(20, "Hole Blockchain-Daten...");
                     try {
                         let address = urlInput.split('/').filter(p => p).pop();
                         const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=8&sort.desc=id`);
@@ -119,75 +145,80 @@
                             keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 6).join(', ');
                         }
                     } catch (e) {
-                        // FALLBACK: Wenn Blockchain blockiert, zeige das manuelle Feld
                         document.getElementById('manualInputContainer').classList.remove('hidden');
-                        document.getElementById('inputContainer').classList.add('hidden');
-                        throw new Error("Blockchain blockiert. Gib den Stil bitte manuell ein.");
+                        document.getElementById('standardInputContainer').classList.add('hidden');
+                        throw new Error("Verbindung blockiert. Gib den Stil bitte manuell ein.");
                     }
                 }
 
                 if (currentMode === 'image') {
-                    updateProgress(60, "KI zeichnet...");
-                    const finalUrl = await getResilientUrl(keywords);
-                    showResult(finalUrl);
+                    updateProgress(60, "KI generiert Bild...");
+                    const finalUrl = await getSafeUrl(keywords);
+                    displayResult(finalUrl);
                 } else {
                     const frames = [];
                     for(let i=0; i<4; i++) {
                         updateProgress(20 + (i*20), `Frame ${i+1}/4...`);
                         if(i > 0) await new Promise(r => setTimeout(r, 4000));
-                        frames.push(await getResilientUrl(keywords + ` variant ${i}`));
+                        frames.push(await getSafeUrl(keywords + ` variation ${i}`));
                     }
-                    updateProgress(95, "Erstelle GIF...");
+                    updateProgress(95, "GIF wird gerendert...");
                     gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5, numFrames: 4 }, (obj) => {
-                        if (!obj.error) showResult(obj.image);
+                        if (!obj.error) displayResult(obj.image);
                     });
                 }
             } catch (err) {
-                btn.disabled = false;
-                btn.innerText = "Erneut versuchen";
-                updateProgress(0, err.message);
+                showError(err.message);
             }
         }
 
-        // Diese Funktion garantiert eine Bild-URL, indem sie mehrere Modelle testet
-        async function getResilientUrl(prompt) {
-            for (let model of models) {
-                const seed = Math.random();
-                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + seed)}?width=512&height=512&nologo=true&model=${model}`;
-                
-                // Wir prüfen nur kurz, ob die URL erreichbar ist
+        async function getSafeUrl(prompt) {
+            for (let model of aiModels) {
+                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + Math.random())}?width=512&height=512&nologo=true&model=${model}`;
                 try {
-                    const success = await checkImage(url);
+                    const success = await probeImage(url);
                     if (success) return url;
                 } catch(e) {}
             }
-            // Letzter Fallback: Einfaches Standard-Modell
             return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
         }
 
-        function checkImage(url) {
+        function probeImage(url) {
             return new Promise((resolve) => {
                 const img = new Image();
+                img.crossOrigin = "anonymous";
                 img.onload = () => resolve(true);
                 img.onerror = () => resolve(false);
                 img.src = url;
-                setTimeout(() => resolve(false), 10000);
+                setTimeout(() => resolve(false), 15000);
             });
         }
 
-        function showResult(source) {
+        function displayResult(source) {
             const resImg = document.getElementById('resultImage');
             resImg.src = source;
             document.getElementById('resultArea').classList.remove('hidden');
             document.getElementById('statusArea').classList.add('hidden');
             document.getElementById('generateBtn').disabled = false;
-            document.getElementById('generateBtn').innerText = "Generieren";
-            
-            document.getElementById('downloadBtn').onclick = () => {
-                const link = document.createElement('a');
-                link.href = source;
-                link.download = `mntg-art.png`;
-                link.click();
+            document.getElementById('generateBtn').innerText = "Kunstwerk generieren";
+
+            // NEUE DOWNLOAD LOGIK (Fix für Error 1033)
+            document.getElementById('downloadBtn').onclick = async () => {
+                try {
+                    const response = await fetch(source);
+                    const blob = await response.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = `mntg-art-${Date.now()}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(blobUrl);
+                } catch (e) {
+                    // Fallback, falls Fetch blockiert wird
+                    window.open(source, '_blank');
+                }
             };
         }
     </script>
