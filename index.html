@@ -5,21 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Objkt Style AI Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Gifshot Library - Standard-Load für maximale Kompatibilität -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
-        /* MNTG Minimalist Aesthetic */
-        body { background-color: #ffffff; color: #000000; font-family: sans-serif; }
-        .mntg-input { border-bottom: 2px solid #000; background: transparent; transition: border-color 0.3s; }
-        .mntg-input:focus { border-color: #888; outline: none; }
+        /* FIXIERTER MNTG MINIMALIST STYLE */
+        body { background-color: #ffffff; color: #000; font-family: 'Helvetica', 'Arial', sans-serif; }
+        .mntg-header { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-size: 3rem; line-height: 1; }
+        .mntg-input { border-bottom: 2px solid #000; padding: 1rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; }
+        .mntg-btn { background: #000; color: #fff; text-transform: uppercase; font-weight: 900; padding: 1.25rem; transition: 0.2s; letter-spacing: 0.1em; font-size: 0.8rem; }
+        .mntg-btn:hover { opacity: 0.8; }
+        .mntg-btn:disabled { background: #ccc; cursor: not-allowed; }
         
-        @keyframes error-blink {
+        @keyframes blink {
             0%, 100% { background-color: #000; }
-            25%, 75% { background-color: #ff0000; }
+            50% { background-color: #ff0000; }
         }
-        .blink-error { animation: error-blink 0.7s ease-in-out 2; }
-        
-        .progress-fill { transition: width 0.5s ease-out; }
+        .error-blink { animation: blink 0.5s ease-in-out 2; }
+        .progress-container { background: #f0f0f0; height: 2px; width: 100%; overflow: hidden; margin-top: 1rem; }
+        .progress-bar { background: #000; height: 100%; width: 0%; transition: width 0.5s ease; }
     </style>
 </head>
 <body class="antialiased">
@@ -27,191 +28,189 @@
     <div class="max-w-2xl mx-auto py-24 px-8">
         <!-- Header -->
         <header class="mb-20">
-            <h1 class="text-5xl font-black italic uppercase tracking-tighter leading-none">
-                Objkt Style Gen <span class="not-italic text-xs font-light opacity-30 tracking-widest uppercase block mt-2">by MNTG</span>
-            </h1>
-            <div class="h-1 w-12 bg-black mt-6"></div>
+            <h1 class="mntg-header">Objkt Style Gen <span style="font-style: normal; font-size: 0.7rem; opacity: 0.3; letter-spacing: 0;">by MNTG</span></h1>
+            <p style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.4em; color: #aaa; margin-top: 10px; font-weight: bold;">Artificial Intelligence Engine</p>
         </header>
 
         <main class="space-y-12">
             <!-- Artist Input -->
-            <div class="flex flex-col space-y-2">
-                <label class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">Profile URL / Address</label>
-                <input type="text" id="artistUrl" placeholder="https://objkt.com/users/..." 
-                    class="mntg-input w-full py-4 text-2xl font-medium placeholder-gray-200">
+            <div>
+                <label style="font-size: 10px; font-weight: 900; text-transform: uppercase; color: #ccc; letter-spacing: 0.2em;">Artist Profile Link</label>
+                <input type="text" id="artistUrl" placeholder="https://objkt.com/users/..." class="mntg-input">
             </div>
 
             <!-- Mode Selection -->
-            <div class="flex gap-4">
-                <button id="modeImage" onclick="setMode('image')" 
-                    class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-2 border-black bg-black text-white transition">
-                    Single Image
-                </button>
-                <button id="modeGif" onclick="setMode('gif')" 
-                    class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-2 border-gray-100 text-gray-300 hover:border-black hover:text-black transition">
-                    Animated GIF
-                </button>
+            <div class="flex gap-2">
+                <button id="modeImage" onclick="setMode('image')" class="mntg-btn flex-1">Single Image</button>
+                <button id="modeGif" onclick="setMode('gif')" class="mntg-btn flex-1" style="background: #fff; color: #ccc; border: 1px solid #eee;">Animated GIF</button>
             </div>
 
-            <!-- Main Action -->
-            <button id="generateBtn" onclick="generate()" 
-                class="w-full py-6 bg-black text-white font-black text-xl uppercase tracking-widest hover:bg-zinc-800 transition active:scale-[0.98]">
-                Generate
-            </button>
+            <!-- Action Button -->
+            <button id="generateBtn" onclick="run()" class="mntg-btn w-full text-xl py-6">Generate</button>
 
-            <!-- Status Area -->
-            <div id="statusArea" class="hidden space-y-4">
-                <div class="flex justify-between items-end">
-                    <span id="statusText" class="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Processing</span>
-                    <span id="percentText" class="text-xl font-black">0%</span>
+            <!-- Status -->
+            <div id="statusArea" class="hidden">
+                <div class="flex justify-between" style="font-size: 10px; font-weight: 900; text-transform: uppercase;">
+                    <span id="statusText">Processing</span>
+                    <span id="percentText">0%</span>
                 </div>
-                <div class="w-full bg-gray-100 h-1">
-                    <div id="progressBar" class="progress-fill bg-black h-full" style="width: 0%"></div>
+                <div class="progress-container">
+                    <div id="progressBar" class="progress-bar"></div>
                 </div>
             </div>
 
             <!-- Error -->
-            <div id="errorArea" class="hidden p-5 bg-black text-white text-[10px] font-bold uppercase tracking-[0.2em] text-center"></div>
+            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center tracking-widest"></div>
 
-            <!-- Result Display -->
-            <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-10 animate-in fade-in duration-1000">
-                <div class="bg-gray-50 p-1">
-                    <img id="resultImage" src="" alt="Result" class="w-full h-auto grayscale-0" crossorigin="anonymous">
+            <!-- Result -->
+            <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-8">
+                <div style="padding: 4px; background: #f9f9f9; border: 1px solid #eee;">
+                    <img id="resultImage" src="" alt="" class="w-full h-auto" crossorigin="anonymous">
                 </div>
                 <div class="flex justify-center">
-                    <button id="downloadBtn" class="px-16 py-5 border-2 border-black text-black font-black text-xs uppercase tracking-widest hover:bg-black hover:text-white transition">
-                        Download Artwork
-                    </button>
+                    <button id="downloadBtn" class="mntg-btn px-12" style="background: #fff; color: #000; border: 2px solid #000;">Download Artwork</button>
                 </div>
             </div>
         </main>
 
-        <footer class="mt-40 pt-10 border-t border-gray-100 flex justify-between items-center text-[9px] text-gray-300 uppercase tracking-[0.2em]">
-            <span>MNTG System 2024</span>
-            <span>Blockchain Style Extraction</span>
+        <footer style="margin-top: 100px; font-size: 9px; color: #ddd; text-transform: uppercase; letter-spacing: 0.3em;">
+            MNTG System • Data via TzKT • No cookies • No storage
         </footer>
     </div>
 
+    <!-- Script Loading -->
     <script>
+        // Dynamisches Laden der GIF-Bibliothek zur Umgehung von Blockern
+        function loadScript(url) {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = () => resolve(true);
+                script.onerror = () => resolve(false);
+                document.head.appendChild(script);
+            });
+        }
+
         let mode = 'image';
-        let artist = 'artist';
+        let artist = '';
 
         function setMode(m) {
             mode = m;
-            const imgBtn = document.getElementById('modeImage');
-            const gifBtn = document.getElementById('modeGif');
-            const active = "flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-2 border-black bg-black text-white transition";
-            const inactive = "flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-2 border-gray-100 text-gray-300 hover:border-black hover:text-black transition";
-            imgBtn.className = (m === 'image') ? active : inactive;
-            gifBtn.className = (m === 'gif') ? active : inactive;
+            document.getElementById('modeImage').style = m === 'image' ? "background:#000; color:#fff;" : "background:#fff; color:#ccc; border:1px solid #eee;";
+            document.getElementById('modeGif').style = m === 'gif' ? "background:#000; color:#fff;" : "background:#fff; color:#ccc; border:1px solid #eee;";
         }
 
-        function update(percent, text) {
+        function updateUI(p, t) {
             document.getElementById('statusArea').classList.remove('hidden');
-            document.getElementById('progressBar').style.width = percent + '%';
-            document.getElementById('percentText').innerText = percent + '%';
-            document.getElementById('statusText').innerText = text;
+            document.getElementById('progressBar').style.width = p + '%';
+            document.getElementById('percentText').innerText = p + '%';
+            document.getElementById('statusText').innerText = t;
         }
 
-        function fail(msg) {
+        function handleError(msg) {
             const btn = document.getElementById('generateBtn');
             const err = document.getElementById('errorArea');
             err.innerText = msg;
             err.classList.remove('hidden');
-            btn.classList.add('blink-error');
-            setTimeout(() => btn.classList.remove('blink-error'), 1500);
+            btn.classList.add('error-blink');
+            setTimeout(() => btn.classList.remove('error-blink'), 1500);
             document.getElementById('statusArea').classList.add('hidden');
             btn.disabled = false;
         }
 
-        async function generate() {
-            const input = document.getElementById('artistUrl').value.trim();
+        async function run() {
+            const urlIn = document.getElementById('artistUrl').value.trim();
             const btn = document.getElementById('generateBtn');
-            if (!input) return;
+            if (!urlIn) return;
 
-            artist = input.split('/').filter(p => p).pop() || 'artist';
+            artist = urlIn.split('/').filter(p => p).pop();
             btn.disabled = true;
             document.getElementById('errorArea').classList.add('hidden');
             document.getElementById('resultArea').classList.add('hidden');
 
             try {
-                update(20, "Extracting Meta...");
-                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artist}&limit=10&sort.desc=id`);
-                if (!res.ok) throw new Error("API Connection Failed");
-                const tokens = await res.json();
-                
-                if (!tokens || tokens.length === 0) throw new Error("No Artist Data Found");
+                // 1. Bibliotheken prüfen
+                if (mode === 'gif' && typeof gifshot === 'undefined') {
+                    updateUI(5, "Loading Engines...");
+                    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js');
+                }
 
-                const prompt = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 8).join(', ');
+                // 2. Blockchain Daten
+                updateUI(20, "Extracting Style...");
+                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artist}&limit=12&sort.desc=id`);
+                const tokens = await res.json();
+                if (!tokens || tokens.length === 0) throw new Error("Artist address invalid or no tokens.");
+
+                const prompt = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 10).join(', ');
 
                 if (mode === 'image') {
-                    update(60, "AI Generating...");
-                    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " artistic style, high resolution, no text")}?width=512&height=512&nologo=true&seed=${Math.random()}`;
-                    
-                    // Bild direkt laden ohne Umwege
-                    const loadedUrl = await forceLoad(url);
-                    display(loadedUrl);
+                    updateUI(50, "AI is painting...");
+                    const finalUrl = await resilientLoad(prompt);
+                    show(finalUrl);
                 } else {
-                    // GIF Mode
-                    if (typeof gifshot === 'undefined') throw new Error("GIF Engine not ready. Refresh Page.");
-                    
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        update(20 + (i*15), `Phase ${i+1}/4`);
-                        if(i > 0) await new Promise(r => setTimeout(r, 3500));
-                        const fUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " animation variation " + i)}?width=512&height=512&nologo=true&seed=${Math.random()}`;
-                        await forceLoad(fUrl);
+                        updateUI(20 + (i*18), `AI Frame ${i+1}/4`);
+                        if(i > 0) await new Promise(r => setTimeout(r, 4000));
+                        const fUrl = await resilientLoad(prompt + ` variation ${i}`);
                         frames.push(fUrl);
                     }
-                    
-                    update(90, "Compiling GIF...");
+                    updateUI(95, "Compiling GIF...");
                     gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5 }, (obj) => {
-                        if (!obj.error) display(obj.image);
-                        else fail("GIF Compile Error");
+                        if (!obj.error) show(obj.image);
+                        else handleError("GIF Error.");
                     });
                 }
-            } catch (err) {
-                fail(err.message.toUpperCase());
+            } catch (e) {
+                handleError(e.message.toUpperCase());
             }
         }
 
-        // Zwingt den Browser das Bild zu laden bevor es angezeigt wird
-        function forceLoad(url) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.onload = () => resolve(url);
-                img.onerror = () => reject(new Error("AI Server Timeout"));
-                img.src = url;
-                setTimeout(() => reject(new Error("AI Server Busy")), 30000);
-            });
+        // Lädt Bild mit Retry-Logik und verschiedenen Modellen bei Busy-Server
+        async function resilientLoad(keywords) {
+            const engines = ['flux', 'turbo', 'flux-pro'];
+            for (let e of engines) {
+                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(keywords + ", artistic masterpiece, high quality")}?width=512&height=512&nologo=true&seed=${Math.random()}&model=${e}`;
+                try {
+                    return await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.crossOrigin = "anonymous";
+                        const t = setTimeout(() => { img.src = ""; reject(); }, 45000); // 45s Timeout
+                        img.onload = () => { clearTimeout(t); resolve(url); };
+                        img.onerror = () => { clearTimeout(t); reject(); };
+                        img.src = url;
+                    });
+                } catch(err) {
+                    console.warn(`Engine ${e} busy, trying next...`);
+                }
+            }
+            throw new Error("AI Server Overloaded. Try again in 1 min.");
         }
 
-        function display(source) {
-            const resImg = document.getElementById('resultImage');
-            resImg.src = source;
+        function show(src) {
+            const img = document.getElementById('resultImage');
+            img.src = src;
             document.getElementById('resultArea').classList.remove('hidden');
             document.getElementById('statusArea').classList.add('hidden');
             document.getElementById('generateBtn').disabled = false;
 
             document.getElementById('downloadBtn').onclick = async () => {
                 const dBtn = document.getElementById('downloadBtn');
-                dBtn.innerText = "LADEN...";
+                dBtn.innerText = "Downloading...";
                 try {
-                    const response = await fetch(source);
+                    const response = await fetch(src);
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `mntgstyleart_${artist}.${mode === 'image' ? 'png' : 'gif'}`;
+                    a.download = `mntgstyle_${artist}_${Date.now()}.${mode === 'image' ? 'png' : 'gif'}`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
                 } catch (e) {
-                    window.open(source, '_blank');
+                    window.open(src, '_blank');
                 }
-                dBtn.innerText = "DOWNLOAD ARTWORK";
+                dBtn.innerText = "Download Artwork";
             };
         }
     </script>
