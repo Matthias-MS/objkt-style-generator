@@ -24,14 +24,10 @@
         </header>
 
         <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-gray-100">
-            <div id="protocolWarning" class="hidden mb-6 p-4 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-xs font-bold uppercase tracking-tight text-center">
-                Warnung: Du nutzt "file://". Bitte lade die App auf GitHub/Vercel hoch, sonst blockiert der Browser die KI!
-            </div>
-
             <div class="space-y-6">
                 <!-- Token Setup -->
                 <div id="tokenSetup" class="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                    <label class="block text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-widest">HuggingFace Key (hf_...)</label>
+                    <label class="block text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-widest leading-none">HuggingFace Key (hf_...)</label>
                     <div class="flex gap-2">
                         <input type="password" id="tokenInput" placeholder="Token hier einfügen..." class="flex-1 px-3 py-2 text-xs rounded-lg border border-gray-200 outline-none">
                         <button onclick="saveToken()" class="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition hover:bg-gray-800">Speichern</button>
@@ -92,11 +88,6 @@
     </div>
 
     <script>
-        // Check auf file-Protokoll
-        if (window.location.protocol === "file:") {
-            document.getElementById('protocolWarning').classList.remove('hidden');
-        }
-
         let currentMode = 'image';
         const aiModels = ['flux', 'turbo', 'flux-realism', 'any-dark'];
 
@@ -106,6 +97,7 @@
             if(t.startsWith('hf_')) {
                 localStorage.setItem('mntg_hf_token', t);
                 document.getElementById('tokenSetup').classList.add('hidden');
+                location.reload();
             } else { alert("Token ungültig."); }
         }
 
@@ -127,9 +119,9 @@
             else { ms.classList.add('hidden'); }
         }
 
-        function showError(msg) {
+        function showError(msg, details = "") {
             const err = document.getElementById('errorArea');
-            err.innerHTML = msg;
+            err.innerHTML = `<strong>${msg}</strong>${details ? '<br><span class="text-[10px] opacity-70">' + details + '</span>' : ''}`;
             err.classList.remove('hidden', 'error-blink');
             void err.offsetWidth; 
             err.classList.add('error-blink');
@@ -153,9 +145,25 @@
 
             try {
                 updateProgress(10, "Lade Artist-Daten...");
-                const blockchainRes = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=10&sort.desc=id`);
-                const tokens = await blockchainRes.json();
                 
+                // --- BLOCKCHAIN FALLBACK SYSTEM ---
+                let tokens = [];
+                try {
+                    // Versuch 1: TzKT (Standard)
+                    const res1 = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=10&sort.desc=id`);
+                    tokens = await res1.json();
+                } catch (e1) {
+                    console.warn("TzKT blockiert, versuche TzStats Fallback...");
+                    try {
+                        // Versuch 2: TzStats (Fallback)
+                        const res2 = await fetch(`https://api.mainnet.tzstats.com/explorer/account/${address}/op?type=origination&limit=10`);
+                        const ops = await res2.json();
+                        tokens = ops.map(o => ({ metadata: { name: "Art" } })); // Minimale Daten
+                    } catch (e2) {
+                        throw new Error("BLOCKCHAIN_ACCESS_DENIED: Alle Tezos-Server werden von deinem Browser oder Netzwerk blockiert.");
+                    }
+                }
+
                 if (!tokens || tokens.length === 0) throw new Error("Artist nicht gefunden oder keine Werke.");
 
                 const keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 6).join(', ');
@@ -174,14 +182,17 @@
                     displayResult(frames);
                 }
             } catch (err) {
-                showError("SYSTEM-FEHLER: " + err.message + "<br><br>Hinweis: Wenn du 'NetworkError' siehst, blockiert dein Browser die Verbindung. Lade die Seite auf GitHub Pages oder Vercel hoch!");
+                console.error("Detaillierter Fehler:", err);
+                showError("SYSTEM-FEHLER", err.message);
             }
         }
 
         async function smartRotation(prompt, token) {
-            // Wir probieren Pollinations (Direkt-Link-Methode umgeht CORS)
+            // Erst Pollinations (Direkt-Link Methode umgeht CORS-Sperren oft)
             for (let mId of aiModels) {
-                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + Math.random())}?width=512&height=512&nologo=true&model=${mId}`;
+                const seed = Math.random();
+                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + seed)}?width=512&height=512&nologo=true&model=${mId}`;
+                
                 try {
                     await checkImg(url);
                     return url;
@@ -191,6 +202,7 @@
             return await fetchHF(prompt, token);
         }
 
+        // Testet Bild-URLs OHNE Fetch (Browser-Native)
         function checkImg(url) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
@@ -202,18 +214,25 @@
         }
 
         async function fetchHF(prompt, token) {
-            const res = await fetch(`https://api-inference.huggingface.co/models/stabilityai/sd-turbo`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ inputs: prompt }),
-            });
-            if (res.status === 503) {
-                await new Promise(r => setTimeout(r, 10000));
-                return await fetchHF(prompt, token);
+            try {
+                const res = await fetch(`https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify({ inputs: prompt }),
+                });
+
+                if (res.status === 503) {
+                    updateProgress(85, "HF wacht auf...", "10s warten...");
+                    await new Promise(r => setTimeout(r, 10000));
+                    return await fetchHF(prompt, token);
+                }
+
+                if (!res.ok) throw new Error("HF_API_ERROR_" + res.status);
+                const blob = await res.blob();
+                return URL.createObjectURL(blob);
+            } catch (e) {
+                throw new Error("HF_NETWORK_BLOCK: HuggingFace wird von deinem System blockiert.");
             }
-            if (!res.ok) throw new Error("HuggingFace blockiert. Status: " + res.status);
-            const blob = await res.blob();
-            return URL.createObjectURL(blob);
         }
 
         function displayResult(source) {
