@@ -7,222 +7,193 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
-        body { background: #ffffff; color: #000; font-family: 'Inter', sans-serif; }
-        .mntg-header { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-size: 3.5rem; line-height: 0.9; }
-        .mntg-input { border-bottom: 2px solid #000; padding: 1rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; border-radius: 0; }
-        .mntg-btn { background: #000; color: #fff; text-transform: uppercase; font-weight: 900; padding: 1.25rem; transition: 0.2s; letter-spacing: 0.1em; font-size: 0.8rem; }
-        .mntg-btn:disabled { opacity: 0.2; cursor: not-allowed; }
-        
-        .prompt-log { background: #f9f9f9; border: 1px solid #eee; padding: 1.5rem; font-family: monospace; font-size: 12px; color: #444; line-height: 1.6; position: relative; margin-top: 2rem; display: none; }
-        .prompt-log::before { content: "TRANSFORMATIVE_PROMPT_ENGINE_LOG"; position: absolute; top: -8px; left: 12px; background: #000; color: #fff; padding: 2px 8px; font-size: 8px; font-weight: 900; }
-        
-        @keyframes blink-red { 0%, 100% { background: #000; } 50% { background: #ff0000; } }
-        .error-blink { animation: blink-red 0.4s ease-in-out 2; }
+        .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        @keyframes blink-red { 0%, 50%, 100% { background-color: #4f46e5; } 25%, 75% { background-color: #ef4444; } }
+        .error-blink { animation: blink-red 0.6s ease-in-out 2; }
     </style>
 </head>
-<body class="antialiased">
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen flex items-center justify-center p-4">
 
-    <div class="max-w-2xl mx-auto py-24 px-8">
-        <!-- Header -->
-        <header class="mb-20">
-            <h1 class="mntg-header">Objkt Style Gen <span style="font-style: normal; font-size: 0.7rem; opacity: 0.2; letter-spacing: 0; vertical-align: top;">by MNTG</span></h1>
-            <p style="text-transform: uppercase; font-size: 9px; letter-spacing: 0.5em; color: #bbb; margin-top: 15px; font-weight: bold;">Advanced Style Analysis v3.0</p>
+    <div class="max-w-xl w-full">
+        <!-- Header: Zurück zum sauberen Modern-Look -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-slate-800 tracking-tight">Objkt Style Gen</h1>
+            <p class="text-slate-500 mt-2 font-medium">Transformative KI-Kunst von <span class="text-indigo-600">MNTG</span></p>
         </header>
 
-        <div class="space-y-12">
-            <!-- Artist Input -->
-            <div>
-                <label style="font-size: 9px; font-weight: 900; text-transform: uppercase; color: #ccc; letter-spacing: 0.2em;">Artist Profile Link</label>
-                <input type="text" id="artistUrl" placeholder="https://objkt.com/users/..." class="mntg-input">
+        <!-- Main Card -->
+        <div class="bg-white rounded-3xl shadow-2xl shadow-slate-200 p-8 border border-slate-100 space-y-6">
+            
+            <!-- Link Input -->
+            <div id="inputGroup">
+                <label class="block text-sm font-semibold text-slate-700 mb-2 tracking-tight">Artist Profil Link</label>
+                <input type="text" id="artistUrl" placeholder="https://objkt.com/users/..." 
+                    class="w-full px-4 py-4 rounded-2xl border border-slate-200 bg-slate-50 focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-slate-600">
+            </div>
+
+            <!-- Manual Fallback (Nur wenn Blockchain klemmt) -->
+            <div id="manualGroup" class="hidden animate-bounce">
+                <label class="block text-sm font-bold text-rose-500 mb-2">Blockchain blockiert! Gib den Stil manuell ein:</label>
+                <input type="text" id="manualStyle" placeholder="z.B. Abstract Cyberpunk, Oil Painting..." 
+                    class="w-full px-4 py-4 rounded-2xl border-2 border-rose-200 bg-rose-50 outline-none">
             </div>
 
             <!-- Mode Selection -->
-            <div class="flex gap-2">
-                <button id="modeImage" onclick="setMode('image')" class="mntg-btn flex-1">Image</button>
-                <button id="modeGif" onclick="setMode('gif')" class="mntg-btn flex-1" style="background:#fff; color:#ddd; border:1px solid #eee;">GIF</button>
+            <div class="grid grid-cols-2 gap-4">
+                <button id="modeImage" onclick="setMode('image')" class="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all">Bild</button>
+                <button id="modeGif" onclick="setMode('gif')" class="py-3 rounded-xl border-2 border-slate-100 bg-slate-50 text-slate-400 font-bold hover:border-slate-200 transition-all">GIF</button>
             </div>
 
-            <button id="generateBtn" onclick="run()" class="mntg-btn w-full text-xl py-6">Generate</button>
+            <!-- Main Button -->
+            <button id="generateBtn" onclick="run()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-bold text-xl shadow-lg shadow-indigo-200 transition-all active:scale-95">
+                Kunstwerk erstellen
+            </button>
 
             <!-- Status Area -->
-            <div id="statusArea" class="hidden space-y-4">
-                <div class="flex justify-between text-[9px] font-black uppercase tracking-widest">
-                    <span id="statusText">Analyzing Style</span>
+            <div id="statusArea" class="hidden space-y-3">
+                <div class="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <span id="statusText">Initialisiere...</span>
                     <span id="percentText">0%</span>
                 </div>
-                <div style="background: #f5f5f5; width: 100%; height: 1px;"><div id="progressBar" style="background: #000; height: 1px; width: 0%; transition: width 0.3s;"></div></div>
-            </div>
-
-            <!-- Result Area -->
-            <div id="resultArea" class="hidden space-y-10 animate-in fade-in duration-700">
-                <div style="background: #fcfcfc; padding: 4px; border: 1px solid #eee;">
-                    <img id="resultImage" src="" alt="" class="w-full h-auto shadow-2xl" crossorigin="anonymous">
-                </div>
-                <div class="flex justify-center">
-                    <button id="downloadBtn" class="mntg-btn px-16" style="background:#fff; color:#000; border: 2px solid #000;">Download Artwork</button>
+                <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                    <div id="progressBar" class="bg-indigo-600 h-full transition-all duration-500" style="width: 0%"></div>
                 </div>
             </div>
 
-            <!-- PROMPT LOG (IMMER SICHTBAR SOBALD GENERIERT) -->
-            <div id="promptLog" class="prompt-log"></div>
+            <!-- Error -->
+            <div id="errorArea" class="hidden p-4 bg-rose-50 text-rose-600 rounded-2xl text-sm font-medium border border-rose-100 text-center"></div>
 
-            <!-- Error Display -->
-            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center tracking-widest leading-relaxed"></div>
+            <!-- Result -->
+            <div id="resultArea" class="hidden pt-6 border-t border-slate-100 space-y-6 animate-in fade-in duration-700">
+                <div class="p-2 bg-slate-50 rounded-3xl border border-slate-100">
+                    <img id="resultImg" class="w-full h-auto rounded-2xl shadow-sm" src="" crossorigin="anonymous">
+                </div>
+                <button id="downloadBtn" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all">
+                    Download Artwork
+                </button>
+                
+                <!-- Prompt Log: Jetzt lesbar und permanent -->
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">KI-Analyse-Log</span>
+                    <p id="promptLog" class="text-xs text-slate-500 font-mono leading-relaxed"></p>
+                </div>
+            </div>
         </div>
+
+        <footer class="mt-8 text-center text-xs text-slate-400 font-medium">
+            Objkt API & Pollinations Engine • Kostenlos & Transformativ
+        </footer>
     </div>
 
-    <!-- Hidden canvas for processing -->
-    <canvas id="canvasProxy" style="display:none;"></canvas>
-
     <script>
-        let currentMode = 'image';
-        let artistName = 'artist';
+        let mode = 'image';
+        let artist = 'artist';
 
         function setMode(m) {
-            currentMode = m;
-            document.getElementById('modeImage').style = m === 'image' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
-            document.getElementById('modeGif').style = m === 'gif' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
+            mode = m;
+            document.getElementById('modeImage').className = m === 'image' ? "py-3 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all" : "py-3 rounded-xl border-2 border-slate-100 bg-slate-50 text-slate-400 font-bold hover:border-slate-200 transition-all";
+            document.getElementById('modeGif').className = m === 'gif' ? "py-3 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all" : "py-3 rounded-xl border-2 border-slate-100 bg-slate-50 text-slate-400 font-bold hover:border-slate-200 transition-all";
         }
 
-        function updateUI(p, t, promptText = "") {
+        function update(p, t) {
             document.getElementById('statusArea').classList.remove('hidden');
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('percentText').innerText = p + '%';
             document.getElementById('statusText').innerText = t;
-            
-            if(promptText) {
-                const log = document.getElementById('promptLog');
-                log.style.display = 'block';
-                log.innerText = promptText;
-            }
         }
 
         function fail(msg) {
-            const btn = document.getElementById('generateBtn');
             const err = document.getElementById('errorArea');
+            const btn = document.getElementById('generateBtn');
             err.innerText = msg; err.classList.remove('hidden');
             btn.classList.add('error-blink');
-            setTimeout(() => { btn.classList.remove('error-blink'); btn.disabled = false; }, 1500);
+            setTimeout(() => { btn.classList.remove('error-blink'); btn.disabled = false; }, 1000);
             document.getElementById('statusArea').classList.add('hidden');
         }
 
         async function run() {
             const urlIn = document.getElementById('artistUrl').value.trim();
-            if(!urlIn) return;
+            const manIn = document.getElementById('manualStyle').value.trim();
+            if(!urlIn && !manIn) return;
 
-            artistName = urlIn.split('/').filter(p => p).pop() || 'artist';
+            artist = urlIn.split('/').filter(p => p).pop() || 'artist';
             document.getElementById('generateBtn').disabled = true;
             document.getElementById('errorArea').classList.add('hidden');
             document.getElementById('resultArea').classList.add('hidden');
-            document.getElementById('promptLog').style.display = 'none';
 
             try {
-                updateUI(10, "Extracting Aesthetic DNA...");
-                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artistName}&limit=15&sort.desc=id`);
-                const tokens = await res.json();
-                
-                if(!tokens || tokens.length === 0) throw new Error("No tokens found for this address.");
+                let finalPrompt = manIn;
 
-                // VERBESSERTE STIL-ANALYSE
-                const textPool = tokens.map(t => (t.metadata?.name || '') + ' ' + (t.metadata?.description || '')).join(' ');
-                const keywords = textPool.toLowerCase()
-                    .replace(/[^a-z\s]/g, ' ')
-                    .split(/\s+/)
-                    .filter(w => w.length > 4 && !['number', 'edition', 'series', 'collection', 'token'].includes(w))
-                    .slice(0, 15)
-                    .join(', ');
-                
-                // DER NEUE MASTER-PROMPT (Künstlerische Abstraktion statt Objekte)
-                const finalPrompt = `A transformative original digital artwork, aesthetic style analysis: ${keywords}. Focusing on visual atmosphere, artistic textures, evocative lighting, and color harmony. Masterpiece composition, high resolution, abstract surrealism, no text, no signatures, no literal objects.`;
+                if(!manIn) {
+                    update(20, "Analysiere Künstler-Stil...");
+                    try {
+                        const controller = new AbortController();
+                        const id = setTimeout(() => controller.abort(), 5000); // 5s Timeout für Blockchain
+                        const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artist}&limit=12&sort.desc=id`, { signal: controller.signal });
+                        clearTimeout(id);
+                        const tokens = await res.json();
+                        
+                        if(!tokens || tokens.length === 0) throw new Error();
+                        
+                        const keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 10).join(', ');
+                        
+                        // Der transformative Prompt (keine Kopie, nur Inspiration)
+                        finalPrompt = `An original transformative digital artwork, abstract visual language inspired by the color palette and textures of ${keywords}. Evocative lighting, artistic masterpiece, no literal objects, no text, no signatures, 8k resolution.`;
+                    } catch (e) {
+                        document.getElementById('manualGroup').classList.remove('hidden');
+                        document.getElementById('inputGroup').classList.add('hidden');
+                        throw new Error("Verbindung blockiert. Gib den Stil bitte manuell ein.");
+                    }
+                }
 
-                updateUI(30, "Style Profile Created", finalPrompt);
+                document.getElementById('promptLog').innerText = finalPrompt;
 
-                if (currentMode === 'image') {
-                    const data = await getResilientImage(finalPrompt);
-                    show(data, finalPrompt);
+                if (mode === 'image') {
+                    update(60, "KI malt dein Bild...");
+                    const imgUrl = await getImg(finalPrompt);
+                    show(imgUrl);
                 } else {
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        updateUI(15 + (i*20), `Generating Frame ${i+1}/4`, finalPrompt + ` (Variation ${i})`);
-                        const f = await getResilientImage(finalPrompt + ` flow_variation_${i}`);
-                        frames.push(f);
-                        if(i < 3) await new Promise(r => setTimeout(r, 4000));
+                        update(20 + (i*20), `Rendere Frame ${i+1}/4...`);
+                        frames.push(await getImg(finalPrompt + ` variation ${i}`));
+                        if(i < 3) await new Promise(r => setTimeout(r, 3000));
                     }
-                    updateUI(95, "Merging Animation...", finalPrompt);
+                    update(95, "Erstelle GIF...");
                     gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5 }, (obj) => {
-                        if(!obj.error) show(obj.image, finalPrompt);
-                        else fail("GIF ENGINE FAILED.");
+                        if(!obj.error) show(obj.image);
+                        else fail("GIF-FEHLER.");
                     });
                 }
-            } catch(e) { fail(e.message.toUpperCase()); }
+            } catch(e) { fail(e.message); }
         }
 
-        async function getResilientImage(prompt) {
-            const hfToken = localStorage.getItem('mntg_hf_token'); // Check für deinen Token
-            const salt = Math.random().toString(36).substring(7);
-
-            // 1. VERSUCH: Hugging Face SDXL Turbo (Falls Token da - beste Erfolgschance)
-            if(hfToken) {
-                try {
-                    return await fetchHuggingFace(prompt + " " + salt, hfToken);
-                } catch(e) { console.warn("HF fail, trying Pollinations..."); }
-            }
-
-            // 2. VERSUCH: Pollinations Flux
-            try { return await loadImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=flux`); } 
-            catch (e) {
-                // 3. VERSUCH: Pollinations Turbo
-                return await loadImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=turbo`);
-            }
-        }
-
-        function loadImage(url) {
+        async function getImg(prompt) {
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${Math.random()}&model=turbo`;
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-                const timeout = setTimeout(() => { img.src = ""; reject(); }, 30000);
-                img.onload = () => {
-                    clearTimeout(timeout);
-                    const canvas = document.getElementById('canvasProxy');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = 512; canvas.height = 512;
-                    ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL("image/png"));
-                };
-                img.onerror = () => { clearTimeout(timeout); reject(); };
+                img.onload = () => resolve(url);
+                img.onerror = () => reject(new Error("KI-Server antwortet nicht. Bitte kurz warten."));
                 img.src = url;
+                setTimeout(() => reject(new Error("Timeout.")), 35000);
             });
         }
 
-        async function fetchHuggingFace(prompt, token) {
-            const response = await fetch("https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ inputs: prompt }),
-            });
-            if (!response.ok) throw new Error();
-            const blob = await response.blob();
-            return new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
-        }
-
-        function show(src, prompt) {
-            const img = document.getElementById('resultImage');
-            img.src = src;
-            document.getElementById('promptLog').innerText = prompt;
+        function show(src) {
+            document.getElementById('resultImg').src = src;
             document.getElementById('resultArea').classList.remove('hidden');
             document.getElementById('statusArea').classList.add('hidden');
             document.getElementById('generateBtn').disabled = false;
-            document.getElementById('generateBtn').innerText = "Generate";
 
-            document.getElementById('downloadBtn').onclick = () => {
+            document.getElementById('downloadBtn').onclick = async () => {
+                const response = await fetch(src);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = src;
-                a.download = `mntgstyle_${artistName}.png`;
+                a.href = url;
+                a.download = `mntg_style_${artist}.png`;
                 a.click();
             };
         }
