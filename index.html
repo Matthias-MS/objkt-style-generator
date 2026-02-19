@@ -5,111 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Objkt Style AI Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Gifshot direkt einbinden -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
-        /* Der minimalistische Style */
-        body { background-color: #fcfcfc; }
-        .btn-active { background-color: #000 ! appointees; color: #fff; }
-        .btn-inactive { background-color: #f3f4f6; color: #9ca3af; }
+        /* Minimalist MNTG Style */
+        body { background-color: #fcfcfc; color: #000; }
+        input::placeholder { color: #ccc; }
         
         @keyframes blink-red {
-            0%, 50%, 100% { opacity: 1; transform: scale(1); }
-            25%, 75% { opacity: 0.3; transform: scale(0.98); }
+            0% { background-color: #000; }
+            25% { background-color: #ef4444; transform: scale(1.02); }
+            50% { background-color: #000; }
+            75% { background-color: #ef4444; transform: scale(1.02); }
+            100% { background-color: #000; }
         }
-        .error-blink { animation: blink-red 0.6s ease-in-out 2; }
+        .error-blink { animation: blink-red 0.8s ease-in-out forwards; }
+
+        .progress-bar { transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="text-gray-900 font-sans min-h-screen border-t-4 border-black">
+<body class="font-sans antialiased">
 
-    <div class="max-w-2xl mx-auto py-16 px-6">
+    <!-- GIFSHOT LOADER -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js" async></script>
+
+    <div class="max-w-2xl mx-auto py-20 px-6">
         <!-- Header -->
-        <header class="mb-12">
-            <h1 class="text-3xl font-black uppercase tracking-tighter italic">
-                Objkt Style Gen <span class="text-xs font-normal not-italic opacity-30 tracking-normal">by MNTG</span>
+        <header class="mb-16">
+            <h1 class="text-4xl font-black uppercase italic tracking-tighter">
+                Objkt Style Gen <span class="not-italic text-xs font-light opacity-30 tracking-normal">by MNTG</span>
             </h1>
-            <p class="text-gray-400 text-sm mt-1 uppercase tracking-widest font-medium">Transformative Art Engine</p>
+            <p class="text-[10px] uppercase tracking-[0.4em] text-gray-400 mt-2 font-bold">Transformative AI Engine v2.0</p>
         </header>
 
-        <!-- Main Card -->
-        <div class="space-y-8">
-            
+        <div class="space-y-10">
             <!-- Input -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Artist Profile / Wallet</label>
+            <div class="border-b-2 border-black">
+                <label class="text-[9px] font-bold uppercase tracking-widest text-gray-400 block mb-1">Artist Profile Link</label>
                 <input type="text" id="artistUrl" 
                     placeholder="https://objkt.com/users/..." 
-                    class="w-full px-0 py-4 bg-transparent border-b-2 border-gray-100 focus:border-black outline-none transition-colors text-lg font-medium">
+                    class="w-full py-4 bg-transparent outline-none text-xl font-medium">
             </div>
 
             <!-- Mode Selection -->
-            <div class="flex gap-4">
+            <div class="flex gap-2">
                 <button id="modeImage" onclick="setMode('image')" 
-                    class="flex-1 py-3 text-xs font-bold uppercase tracking-widest border-2 border-black bg-black text-white transition">
-                    Image
+                    class="flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] border-2 border-black bg-black text-white transition-all">
+                    Single Image
                 </button>
                 <button id="modeGif" onclick="setMode('gif')" 
-                    class="flex-1 py-3 text-xs font-bold uppercase tracking-widest border-2 border-gray-100 bg-white text-gray-300 transition hover:border-black hover:text-black">
-                    GIF
+                    class="flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] border-2 border-gray-100 text-gray-300 transition-all hover:border-black hover:text-black">
+                    Animated GIF
                 </button>
             </div>
 
             <!-- Generate Button -->
             <button id="generateBtn" onclick="start()" 
-                class="w-full py-5 bg-black text-white font-black text-xl uppercase tracking-tighter hover:bg-zinc-800 transition transform active:scale-[0.99]">
-                Generate Artwork
+                class="w-full py-6 bg-black text-white font-black text-2xl uppercase tracking-tighter hover:bg-zinc-800 transition shadow-lg active:scale-[0.98]">
+                Generate
             </button>
 
             <!-- Status Area -->
-            <div id="statusArea" class="hidden space-y-2">
-                <div class="flex justify-between text-[10px] font-bold uppercase">
-                    <span id="statusText" class="text-gray-400">Processing</span>
+            <div id="statusArea" class="hidden space-y-3">
+                <div class="flex justify-between text-[9px] font-black uppercase">
+                    <span id="statusText" class="text-gray-400">Booting Engine</span>
                     <span id="percentText">0%</span>
                 </div>
-                <div class="w-full bg-gray-100 h-[2px]">
-                    <div id="progressBar" class="bg-black h-[2px] transition-all duration-500" style="width: 0%"></div>
+                <div class="w-full bg-gray-100 h-[3px]">
+                    <div id="progressBar" class="progress-bar bg-black h-full" style="width: 0%"></div>
                 </div>
             </div>
 
             <!-- Error Display -->
-            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase tracking-widest text-center"></div>
+            <div id="errorArea" class="hidden p-5 bg-black text-white text-[10px] font-bold uppercase tracking-widest text-center"></div>
 
             <!-- Result Display -->
-            <div id="resultArea" class="hidden space-y-6 pt-8 border-t border-gray-100">
-                <div class="bg-white p-1 border border-gray-100 inline-block w-full">
-                    <img id="resultImage" src="" alt="Result" class="w-full h-auto" crossorigin="anonymous">
+            <div id="resultArea" class="hidden pt-10 border-t-2 border-black space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div class="bg-gray-50 p-1 border border-gray-200">
+                    <img id="resultImage" src="" alt="Result" class="w-full h-auto shadow-sm" crossorigin="anonymous">
                 </div>
                 <div class="flex justify-center">
-                    <button id="downloadBtn" class="px-12 py-4 bg-white border-2 border-black text-black font-bold text-xs uppercase tracking-widest hover:bg-black hover:text-white transition">
-                        Download Result
+                    <button id="downloadBtn" class="px-16 py-5 bg-white border-2 border-black text-black font-black text-xs uppercase tracking-[0.2em] hover:bg-black hover:text-white transition shadow-xl">
+                        Download Artwork
                     </button>
                 </div>
             </div>
         </div>
 
-        <footer class="mt-24 pt-8 border-t border-gray-100 text-[9px] text-gray-300 uppercase tracking-[0.4em] leading-relaxed">
-            MNTG System • Blockchain Style Extraction • AI Generation • No Storage
+        <footer class="mt-32 text-[9px] text-gray-300 uppercase tracking-[0.3em] leading-relaxed">
+            Data sourced via TzKT API • AI processing via Pollinations • No tracking • System by MNTG
         </footer>
     </div>
 
-    <!-- Hidden Canvas for high-quality data extraction -->
-    <canvas id="exportCanvas" class="hidden"></canvas>
-
     <script>
         let currentMode = 'image';
-        let currentArtist = 'artist';
+        let artistName = 'artist';
 
         function setMode(mode) {
             currentMode = mode;
             const imgBtn = document.getElementById('modeImage');
             const gifBtn = document.getElementById('modeGif');
-            if (mode === 'image') {
-                imgBtn.className = "flex-1 py-3 text-xs font-bold uppercase tracking-widest border-2 border-black bg-black text-white transition";
-                gifBtn.className = "flex-1 py-3 text-xs font-bold uppercase tracking-widest border-2 border-gray-100 bg-white text-gray-300 transition hover:border-black hover:text-black";
-            } else {
-                gifBtn.className = "flex-1 py-3 text-xs font-bold uppercase tracking-widest border-2 border-black bg-black text-white transition";
-                imgBtn.className = "flex-1 py-3 text-xs font-bold uppercase tracking-widest border-2 border-gray-100 bg-white text-gray-300 transition hover:border-black hover:text-black";
-            }
+            const active = "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] border-2 border-black bg-black text-white transition-all";
+            const inactive = "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] border-2 border-gray-100 text-gray-300 transition-all hover:border-black hover:text-black";
+            imgBtn.className = (mode === 'image') ? active : inactive;
+            gifBtn.className = (mode === 'gif') ? active : inactive;
         }
 
         function updateProgress(percent, text) {
@@ -120,13 +117,14 @@
         }
 
         function showError(msg) {
+            const btn = document.getElementById('generateBtn');
             const err = document.getElementById('errorArea');
             err.innerText = msg;
-            err.classList.remove('hidden', 'error-blink');
-            void err.offsetWidth; 
-            err.classList.add('error-blink');
+            err.classList.remove('hidden');
+            btn.classList.add('error-blink');
+            setTimeout(() => btn.classList.remove('error-blink'), 1000);
             document.getElementById('statusArea').classList.add('hidden');
-            document.getElementById('generateBtn').disabled = false;
+            btn.disabled = false;
         }
 
         async function start() {
@@ -134,44 +132,46 @@
             const btn = document.getElementById('generateBtn');
             if (!input) return;
 
-            currentArtist = input.split('/').filter(p => p).pop() || 'artist';
+            artistName = input.split('/').filter(p => p).pop() || 'artist';
             btn.disabled = true;
             document.getElementById('errorArea').classList.add('hidden');
             document.getElementById('resultArea').classList.add('hidden');
 
             try {
-                updateProgress(20, "Analyzing Artist Metadata...");
-                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${currentArtist}&limit=10&sort.desc=id`);
+                updateProgress(15, "Extracting Style...");
+                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artistName}&limit=10&sort.desc=id`);
                 const tokens = await res.json();
                 
-                if (!tokens || tokens.length === 0) throw new Error("No Artworks found for this address.");
+                if (!tokens || tokens.length === 0) throw new Error("Artist Data not reachable");
 
-                const prompt = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 8).join(', ');
+                const keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 8).join(', ');
 
                 if (currentMode === 'image') {
-                    updateProgress(60, "Generating Image...");
-                    const url = await getResilientUrl(prompt);
+                    updateProgress(50, "Neural Generation...");
+                    const url = await getWorkingUrl(keywords);
+                    await forceLoad(url);
                     display(url);
                 } else {
-                    // GIF Check
-                    if (typeof gifshot === 'undefined') throw new Error("GIF Library still loading. Try again in 2s.");
+                    // Robuster Check für Gifshot
+                    if (typeof gifshot === 'undefined') {
+                        updateProgress(40, "Loading GIF Engine...");
+                        await new Promise(r => setTimeout(r, 3000));
+                        if (typeof gifshot === 'undefined') throw new Error("GIF Library blocked by Browser");
+                    }
                     
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        updateProgress(20 + (i*15), `Creating Frame ${i+1}/4...`);
+                        updateProgress(20 + (i*15), `Rendering Phase ${i+1}/4`);
                         if(i > 0) await new Promise(r => setTimeout(r, 4000));
-                        frames.push(await getResilientUrl(prompt + ` variation ${i}`));
+                        const fUrl = await getWorkingUrl(keywords + ` variant ${i}`);
+                        await forceLoad(fUrl);
+                        frames.push(fUrl);
                     }
                     
-                    updateProgress(90, "Rendering Animation...");
-                    gifshot.createGIF({
-                        images: frames,
-                        gifWidth: 512,
-                        gifHeight: 512,
-                        interval: 0.5
-                    }, (obj) => {
+                    updateProgress(90, "Assembling Animation...");
+                    gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5 }, (obj) => {
                         if (!obj.error) display(obj.image);
-                        else showError("GIF Rendering failed.");
+                        else showError("GIF COMPILE ERROR");
                     });
                 }
             } catch (err) {
@@ -179,26 +179,36 @@
             }
         }
 
-        async function getResilientUrl(keywords) {
-            const models = ['flux', 'turbo', 'flux-realism'];
-            for (let m of models) {
-                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(keywords + " artistic style, masterpiece, no text")}?width=512&height=512&nologo=true&seed=${Math.random()}&model=${m}`;
+        async function getWorkingUrl(prompt) {
+            const engines = ['flux', 'turbo', 'flux-realism'];
+            for (let e of engines) {
+                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${Math.random()}&model=${e}`;
                 try {
-                    const loaded = await preload(url);
-                    if (loaded) return url;
+                    const ok = await probe(url);
+                    if (ok) return url;
                 } catch(e) {}
             }
-            return `https://image.pollinations.ai/prompt/${encodeURIComponent(keywords)}?width=512&height=512&nologo=true`;
+            return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
         }
 
-        function preload(url) {
+        function probe(url) {
             return new Promise((resolve) => {
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.onload = () => resolve(true);
-                img.onerror = () => resolve(false);
-                img.src = url;
-                setTimeout(() => resolve(false), 20000);
+                const i = new Image();
+                i.crossOrigin = "anonymous";
+                i.onload = () => resolve(true);
+                i.onerror = () => resolve(false);
+                i.src = url;
+                setTimeout(() => resolve(false), 15000);
+            });
+        }
+
+        function forceLoad(url) {
+            return new Promise((resolve, reject) => {
+                const i = new Image();
+                i.crossOrigin = "anonymous";
+                i.onload = resolve;
+                i.onerror = reject;
+                i.src = url;
             });
         }
 
@@ -209,34 +219,34 @@
             document.getElementById('statusArea').classList.add('hidden');
             document.getElementById('generateBtn').disabled = false;
 
-            document.getElementById('downloadBtn').onclick = () => {
-                if (source.startsWith('data:image/gif')) {
-                    downloadRaw(source, `mntgstyle_${currentArtist}.gif`);
-                } else {
-                    // Canvas draw-down for guaranteed pixels
-                    const canvas = document.getElementById('exportCanvas');
-                    canvas.width = resImg.naturalWidth || 512;
-                    canvas.height = resImg.naturalHeight || 512;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(resImg, 0, 0);
-                    try {
-                        const data = canvas.toDataURL("image/png");
-                        downloadRaw(data, `mntgstyle_${currentArtist}.png`);
-                    } catch(e) {
-                        downloadRaw(source, `mntgstyle_${currentArtist}.png`);
-                    }
+            document.getElementById('downloadBtn').onclick = async () => {
+                const dBtn = document.getElementById('downloadBtn');
+                dBtn.innerText = "PREPARING...";
+                
+                try {
+                    // Blob-Methode: Lädt das Bild als echte Binärdatei
+                    const response = await fetch(source);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `mntgstyleart_${artistName}_${Date.now()}.${currentMode === 'image' ? 'png' : 'gif'}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } catch (e) {
+                    // Notfall: Falls Blob fehlschlägt, direkter Tab-Download
+                    const a = document.createElement('a');
+                    a.href = source;
+                    a.target = "_blank";
+                    a.download = `mntgstyleart_${artistName}.png`;
+                    a.click();
                 }
+                dBtn.innerText = "DOWNLOAD ARTWORK";
             };
-        }
-
-        function downloadRaw(url, name) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
         }
     </script>
 </body>
 </html>
+
