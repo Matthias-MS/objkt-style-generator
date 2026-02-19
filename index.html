@@ -59,8 +59,8 @@
                     <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                         <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
                     </div>
-                    <!-- Spezifische Modell-Anzeige -->
-                    <div id="modelStatus" class="text-center text-xs mt-3 p-2 bg-indigo-50 text-indigo-600 rounded-lg font-bold animate-pulse hidden"></div>
+                    <!-- Modell-Anzeige mit Ghost-Routing Info -->
+                    <div id="modelStatus" class="text-center text-[10px] mt-3 p-2 bg-gray-100 text-gray-500 rounded-lg font-mono uppercase tracking-widest hidden"></div>
                 </div>
 
                 <!-- Error Display -->
@@ -87,13 +87,13 @@
     <script>
         let currentMode = 'image';
         
-        // Liste der verfügbaren kostenlosen Modelle/Pfade
+        // Erweiterte Liste mit Ghost-Routing Optionen
         const aiModels = [
-            { id: 'flux', name: 'FLUX Schnell' },
-            { id: 'flux-pro', name: 'FLUX.2 Klein 9B' },
-            { id: 'flux-realism', name: 'Imagen 4 (Alternative)' },
-            { id: 'turbo', name: 'Z-Image Turbo' },
-            { id: 'any-dark', name: 'GPT Image 1 Mini' }
+            { id: 'flux', name: 'FLUX Schnell', bypass: false },
+            { id: 'flux-pro', name: 'FLUX.2 Klein 9B', bypass: true },
+            { id: 'turbo', name: 'Z-Image Turbo', bypass: false },
+            { id: 'flux-realism', name: 'Imagen 4 (Ghost Route)', bypass: true },
+            { id: 'any-dark', name: 'GPT Image 1 Mini', bypass: true }
         ];
 
         function setMode(mode) {
@@ -131,10 +131,8 @@
         async function startGeneration() {
             let input = document.getElementById('artistUrl').value.trim();
             const btn = document.getElementById('generateBtn');
-            const resultArea = document.getElementById('resultArea');
-            
             document.getElementById('errorArea').classList.add('hidden');
-            resultArea.classList.add('hidden');
+            document.getElementById('resultArea').classList.add('hidden');
 
             if (!input) { showError("Bitte gib einen Link oder eine Adresse ein."); return; }
             let address = input.split('/').filter(p => p).pop();
@@ -146,19 +144,18 @@
                 updateProgress(10, "Lade Artist-Daten...");
                 const response = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=12&sort.desc=id`);
                 const tokens = await response.json();
-                
                 if (!tokens || tokens.length === 0) throw new Error("Keine Werke für diese Adresse gefunden.");
 
-                const prompt = createStablePrompt(tokens);
+                const promptData = createStablePrompt(tokens);
 
                 if (currentMode === 'image') {
-                    const imgUrl = await rotationGenerate(prompt);
+                    const imgUrl = await rotationGenerate(promptData);
                     displayResult(imgUrl);
                 } else {
                     const frames = [];
                     for(let i=0; i<4; i++) {
                         updateProgress(20 + (i*20), `Generiere Frame ${i+1}/4...`);
-                        frames.push(await rotationGenerate(prompt + `, phase ${i}`));
+                        frames.push(await rotationGenerate(promptData + ` phase${i}`));
                     }
                     displayResult(frames);
                 }
@@ -169,37 +166,46 @@
 
         function createStablePrompt(tokens) {
             const textPool = tokens.map(t => t.metadata?.name || '').join(' ');
-            const keywords = textPool.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 4).slice(0, 10).join(', ');
-            return `Unique digital art, style of ${keywords || 'abstract'}, masterpiece, no text`;
+            return textPool.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 4).slice(0, 8);
         }
 
-        // ROTATIONS-LOGIK: Probiert alle Modelle nacheinander
-        async function rotationGenerate(prompt) {
+        async function rotationGenerate(keywordsArray) {
+            // Wir fangen mit dem vollen Prompt an
+            let currentPrompt = `Unique art, style of ${keywordsArray.join(', ')}`;
+            
             for (let i = 0; i < aiModels.length; i++) {
                 const model = aiModels[i];
+                
+                // Wenn wir beim letzten Versuch sind, radikal kürzen (Sicherheits-Bypass)
+                if (i === aiModels.length - 1) {
+                    currentPrompt = keywordsArray.slice(0, 3).join(' ') + " abstract art";
+                }
+
                 updateProgress(60, "KI generiert Bild...", model.name);
                 
                 try {
-                    const url = await loadImageAttempt(prompt, model.id);
-                    return url; // Erfolg!
+                    const url = await loadImageAttempt(currentPrompt, model.id, model.bypass);
+                    return url;
                 } catch (e) {
-                    console.warn(`${model.name} fehlgeschlagen, probiere nächstes...`);
-                    if (i < aiModels.length - 1) {
-                        await new Promise(r => setTimeout(r, 2000)); // Kurze Pause vor dem nächsten Modell
-                    }
+                    console.warn(`${model.name} fehlgeschlagen...`);
+                    await new Promise(r => setTimeout(r, 1500));
                 }
             }
             throw new Error("Tageslimit erreicht oder alle Server überlastet. Bitte später erneut versuchen.");
         }
 
-        function loadImageAttempt(prompt, modelId) {
+        function loadImageAttempt(prompt, modelId, useBypass) {
             return new Promise((resolve, reject) => {
                 const seed = Math.floor(Math.random() * 1000000);
-                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&model=${modelId}&nologo=true`;
+                // Ghost-Routing: Zufällige Parameter hinzufügen um Caches zu umgehen
+                const ghostParam = useBypass ? `&ghost=${Math.random().toString(36).substring(7)}` : '';
+                const timeParam = `&t=${Date.now()}`;
+                
+                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&model=${modelId}&nologo=true${ghostParam}${timeParam}`;
                 
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-                const timeout = setTimeout(() => { img.src = ""; reject(new Error("Timeout")); }, 35000);
+                const timeout = setTimeout(() => { img.src = ""; reject(new Error("Timeout")); }, 30000);
 
                 img.onload = () => { clearTimeout(timeout); resolve(url); };
                 img.onerror = () => { clearTimeout(timeout); reject(new Error("Load Error")); };
@@ -245,4 +251,3 @@
     </script>
 </body>
 </html>
-
