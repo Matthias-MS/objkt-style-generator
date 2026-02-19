@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Objkt Style AI Generator</title>
+    <!-- CSS und Bibliotheken -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
@@ -21,43 +22,36 @@
             <h1 class="text-4xl font-extrabold tracking-tight mb-2 uppercase italic">
                 Objkt Artist Style Gen<span class="align-super text-xs ml-1 opacity-40 font-normal">by MNTG</span>
             </h1>
-            <p class="text-gray-400 text-sm">Transformative KI-Kunst • Kostenlos & Anonym</p>
+            <p class="text-gray-500">Transformative KI-Kunst basierend auf Artist-Stilen.</p>
         </header>
 
         <!-- Main Card -->
         <div class="bg-white rounded-2xl shadow-xl p-6 md:p-10 border border-gray-100">
             <div class="space-y-6">
                 
-                <!-- Blockchain Fallback -->
-                <div id="manualInputContainer" class="hidden p-4 bg-orange-50 border border-orange-100 rounded-xl mb-4">
-                    <p class="text-[10px] font-bold text-orange-600 uppercase mb-2 italic tracking-widest">Verbindung blockiert. Stil manuell eingeben:</p>
-                    <input type="text" id="manualStyle" placeholder="z.B. Cyberpunk, Minimalist, Oil Painting..." 
-                        class="w-full px-4 py-2 rounded-lg border border-orange-200 outline-none focus:ring-2 focus:ring-orange-500 bg-white">
-                </div>
-
                 <!-- Input Group -->
                 <div id="standardInputContainer">
                     <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Objkt Artist Profil Link</label>
                     <input type="text" id="artistUrl" 
                         placeholder="https://objkt.com/users/..." 
-                        class="w-full px-4 py-4 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-black outline-none transition shadow-inner">
+                        class="w-full px-4 py-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-black outline-none transition">
                 </div>
 
                 <!-- Mode Selection -->
                 <div class="grid grid-cols-2 gap-4">
                     <button id="modeImage" onclick="setMode('image')" 
-                        class="py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-black bg-black text-white shadow-lg">
+                        class="py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-black bg-black text-white">
                         Einzelbild
                     </button>
                     <button id="modeGif" onclick="setMode('gif')" 
-                        class="py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200">
+                        class="py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-gray-100 bg-gray-50 text-gray-400">
                         Animiertes GIF
                     </button>
                 </div>
 
                 <!-- Generate Button -->
                 <button id="generateBtn" onclick="startGeneration()" 
-                    class="w-full bg-black text-white py-5 rounded-xl font-black text-xl hover:bg-gray-800 transition transform active:scale-[0.98] shadow-2xl uppercase tracking-tighter">
+                    class="w-full bg-black text-white py-5 rounded-xl font-bold text-xl hover:bg-gray-800 transition">
                     Generieren
                 </button>
 
@@ -73,16 +67,16 @@
                 </div>
 
                 <!-- Error Display -->
-                <div id="errorArea" class="hidden p-4 bg-red-50 text-red-600 rounded-xl text-xs border border-red-100 font-bold text-center uppercase tracking-widest"></div>
+                <div id="errorArea" class="hidden p-4 bg-red-50 text-red-600 rounded-xl text-xs border border-red-100 font-bold text-center"></div>
 
                 <!-- Result -->
-                <div id="resultArea" class="hidden mt-8 border-t pt-8 text-center animate-in fade-in duration-1000">
-                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 italic">Finales Kunstwerk</h3>
-                    <div class="inline-block p-2 bg-gray-50 rounded-2xl shadow-inner border border-gray-100">
-                        <img id="resultImage" src="" alt="Result" class="max-w-full rounded-xl shadow-2xl mx-auto border border-white" crossorigin="anonymous">
+                <div id="resultArea" class="hidden mt-8 border-t pt-8 text-center animate-in fade-in duration-500">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 italic">Resultat</h3>
+                    <div id="imgContainer" class="inline-block p-2 bg-gray-100 rounded-2xl shadow-inner">
+                        <img id="resultImage" src="" alt="AI Result" class="max-w-full rounded-xl shadow-lg mx-auto border border-white" crossorigin="anonymous">
                     </div>
-                    <div class="mt-8">
-                        <button id="downloadBtn" class="bg-black text-white px-10 py-3 rounded-full font-bold text-xs uppercase tracking-widest hover:scale-105 transition shadow-lg">
+                    <div class="mt-6">
+                        <button id="downloadBtn" class="bg-black text-white px-8 py-3 rounded-full font-bold text-xs uppercase tracking-widest hover:scale-105 transition">
                             Download Artwork
                         </button>
                     </div>
@@ -91,28 +85,24 @@
         </div>
 
         <footer class="mt-20 text-center text-[10px] text-gray-300 uppercase tracking-[0.3em] leading-relaxed">
-            MNTG SYSTEM • NO DATA STORED • AI ENGINE SDXL
+            Nutzt die Objkt API & Pollinations.ai • MNTG SYSTEM
         </footer>
     </div>
-
-    <!-- Hidden Canvas for high quality downloads -->
-    <canvas id="downloadCanvas" class="hidden"></canvas>
 
     <script>
         let currentMode = 'image';
         let currentArtistName = 'artist';
-        const aiModels = ['flux', 'turbo', 'flux-realism', 'any-dark'];
 
         function setMode(mode) {
             currentMode = mode;
             const imgBtn = document.getElementById('modeImage');
             const gifBtn = document.getElementById('modeGif');
             if (mode === 'image') {
-                imgBtn.className = "py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-black bg-black text-white shadow-lg";
-                gifBtn.className = "py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200";
+                imgBtn.className = "py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-black bg-black text-white";
+                gifBtn.className = "py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-gray-100 bg-gray-50 text-gray-400";
             } else {
-                gifBtn.className = "py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-black bg-black text-white shadow-lg";
-                imgBtn.className = "py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200";
+                gifBtn.className = "py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-black bg-black text-white";
+                imgBtn.className = "py-3 px-4 rounded-xl border-2 transition font-bold text-sm border-gray-100 bg-gray-50 text-gray-400";
             }
         }
 
@@ -126,88 +116,82 @@
         function showError(msg) {
             const err = document.getElementById('errorArea');
             err.innerText = msg;
-            err.classList.remove('hidden', 'error-blink');
-            void err.offsetWidth; 
-            err.classList.add('error-blink');
+            err.classList.remove('hidden');
             document.getElementById('statusArea').classList.add('hidden');
             document.getElementById('generateBtn').disabled = false;
         }
 
         async function startGeneration() {
             const urlInput = document.getElementById('artistUrl').value.trim();
-            const manualInput = document.getElementById('manualStyle').value.trim();
             const btn = document.getElementById('generateBtn');
             const resultArea = document.getElementById('resultArea');
 
-            if (!urlInput && !manualInput) return;
+            if (!urlInput) { showError("Bitte gib einen Link ein."); return; }
+            
+            // Artist Name extrahieren
+            currentArtistName = urlInput.split('/').filter(p => p).pop() || 'artist';
 
             btn.disabled = true;
             resultArea.classList.add('hidden');
             document.getElementById('errorArea').classList.add('hidden');
 
             try {
-                let keywords = manualInput || "Abstract Masterpiece";
+                updateProgress(10, "Lade Artist Metadaten...");
+                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${currentArtistName}&limit=8&sort.desc=id`);
+                const tokens = await res.json();
                 
-                // Artist Name extrahieren
-                if (urlInput) {
-                    currentArtistName = urlInput.split('/').filter(p => p).pop() || 'artist';
-                    
-                    if (!manualInput) {
-                        updateProgress(20, "Blockchain Abfrage...");
-                        try {
-                            const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${currentArtistName}&limit=8&sort.desc=id`);
-                            const tokens = await res.json();
-                            if (tokens && tokens.length > 0) {
-                                keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 6).join(', ');
-                            }
-                        } catch (e) {
-                            document.getElementById('manualInputContainer').classList.remove('hidden');
-                            document.getElementById('standardInputContainer').classList.add('hidden');
-                            throw new Error("Verbindung blockiert. Bitte manuell tippen.");
-                        }
-                    }
+                let keywords = "abstract digital art, unique composition";
+                if (tokens && tokens.length > 0) {
+                    keywords = tokens.map(t => t.metadata?.name || '').join(', ').slice(0, 100);
                 }
 
                 if (currentMode === 'image') {
-                    updateProgress(60, "KI generiert...");
-                    const finalUrl = await getSafeUrl(keywords);
-                    displayResult(finalUrl);
+                    updateProgress(50, "KI generiert Bild...");
+                    const seed = Math.floor(Math.random() * 999999);
+                    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(keywords + " artistic style, no text, masterpiece")}?width=512&height=512&seed=${seed}&nologo=true`;
+                    
+                    await forceLoadImage(url);
+                    displayResult(url);
                 } else {
+                    if (typeof gifshot === 'undefined') throw new Error("Bibliothek lädt noch. Bitte 2 Sek warten.");
+                    
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        updateProgress(20 + (i*20), `Frame ${i+1}/4...`);
-                        if(i > 0) await new Promise(r => setTimeout(r, 4000));
-                        frames.push(await getSafeUrl(keywords + ` art variation ${i}`));
+                        updateProgress(20 + (i*20), `KI erstellt Frame ${i+1}/4...`);
+                        const seed = Math.floor(Math.random() * 999999);
+                        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(keywords + " motion style")}?width=512&height=512&seed=${seed}&nologo=true`;
+                        frames.push(url);
+                        await new Promise(r => setTimeout(r, 2000));
                     }
-                    updateProgress(95, "Rendere GIF...");
-                    gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5, numFrames: 4 }, (obj) => {
-                        if (!obj.error) displayResult(obj.image);
+                    
+                    updateProgress(90, "GIF wird gerendert...");
+                    gifshot.createGIF({
+                        images: frames,
+                        gifWidth: 512,
+                        gifHeight: 512,
+                        interval: 0.5
+                    }, (obj) => {
+                        if (!obj.error) {
+                            displayResult(obj.image);
+                        } else {
+                            showError("GIF Fehler.");
+                        }
                     });
                 }
             } catch (err) {
-                showError(err.message);
+                showError("Fehler: " + err.message);
             }
         }
 
-        async function getSafeUrl(prompt) {
-            for (let model of aiModels) {
-                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + Math.random())}?width=512&height=512&nologo=true&model=${model}`;
-                try {
-                    const success = await probeImage(url);
-                    if (success) return url;
-                } catch(e) {}
-            }
-            return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
-        }
-
-        function probeImage(url) {
-            return new Promise((resolve) => {
+        // Hilfsfunktion: Wartet bis Bild wirklich geladen ist
+        function forceLoadImage(url) {
+            return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-                img.onload = () => resolve(true);
-                img.onerror = () => resolve(false);
+                img.onload = () => resolve();
+                img.onerror = () => reject(new Error("Bild konnte nicht geladen werden."));
                 img.src = url;
-                setTimeout(() => resolve(false), 15000);
+                setTimeout(() => reject(new Error("Zeitüberschreitung.")), 30000);
             });
         }
 
@@ -217,38 +201,28 @@
             document.getElementById('resultArea').classList.remove('hidden');
             document.getElementById('statusArea').classList.add('hidden');
             document.getElementById('generateBtn').disabled = false;
-            document.getElementById('generateBtn').innerText = "Generieren";
-
-            // DOWNLOAD LOGIK FIX (Canvas Methode)
-            document.getElementById('downloadBtn').onclick = () => {
-                if (source.startsWith('data:image/gif')) {
-                    // Direkter Download für GIFs (Base64)
-                    triggerDownload(source, `mntgstyleart_${currentArtistName}.gif`);
-                } else {
-                    // Canvas-Trick für Bilder (umgeht leere Dateien)
-                    const canvas = document.getElementById('downloadCanvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = resImg.naturalWidth || 512;
-                    canvas.height = resImg.naturalHeight || 512;
-                    ctx.drawImage(resImg, 0, 0);
-                    try {
-                        const dataUrl = canvas.toDataURL("image/png");
-                        triggerDownload(dataUrl, `mntgstyleart_${currentArtistName}.png`);
-                    } catch (e) {
-                        // Letzter Fallback falls Canvas blockiert wird
-                        triggerDownload(source, `mntgstyleart_${currentArtistName}.png`);
-                    }
+            
+            // Download Logik mit Blob-Konvertierung (verhindert leere Dateien)
+            document.getElementById('downloadBtn').onclick = async () => {
+                const btn = document.getElementById('downloadBtn');
+                btn.innerText = "LÄDT...";
+                try {
+                    const response = await fetch(source);
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `mntgstyleart_${currentArtistName}.${currentMode === 'image' ? 'png' : 'gif'}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } catch (e) {
+                    // Fallback falls Blob fehlschlägt
+                    window.open(source, '_blank');
                 }
+                btn.innerText = "DOWNLOAD ARTWORK";
             };
-        }
-
-        function triggerDownload(url, filename) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
         }
     </script>
 </body>
