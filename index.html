@@ -7,89 +7,82 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
-        body { background: #fff; color: #000; font-family: sans-serif; }
+        /* MNTG PURE MINIMALISM */
+        body { background: #fff; color: #000; font-family: 'Inter', sans-serif; }
         .mntg-header { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-size: 3.5rem; line-height: 1; }
-        .mntg-input { border-bottom: 2px solid #000; padding: 1rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; }
+        .mntg-input { border-bottom: 2px solid #000; padding: 1rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; border-radius: 0; }
         .mntg-btn { background: #000; color: #fff; text-transform: uppercase; font-weight: 900; padding: 1.25rem; transition: 0.2s; letter-spacing: 0.1em; font-size: 0.8rem; }
+        .mntg-btn:disabled { background: #eee; color: #ccc; cursor: not-allowed; }
+        
         @keyframes blink { 0%, 100% { background: #000; } 50% { background: #ff0000; } }
         .error-blink { animation: blink 0.4s ease-in-out 2; }
+        .progress-bar { height: 1px; background: #000; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body class="antialiased">
 
-    <div class="max-w-2xl mx-auto py-20 px-8">
+    <div class="max-w-2xl mx-auto py-24 px-8">
         <!-- Header -->
-        <header class="mb-16">
-            <h1 class="mntg-header text-black">Objkt Style Gen <span style="font-style: normal; font-size: 0.7rem; opacity: 0.3; letter-spacing: 0;">by MNTG</span></h1>
-            <p style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.5em; color: #ccc; margin-top: 10px; font-weight: bold;">Multi-Engine Resilient AI</p>
+        <header class="mb-20">
+            <h1 class="mntg-header">Objkt Style Gen <span style="font-style: normal; font-size: 0.7rem; opacity: 0.2; letter-spacing: 0;">by MNTG</span></h1>
+            <p style="text-transform: uppercase; font-size: 9px; letter-spacing: 0.5em; color: #bbb; margin-top: 10px; font-weight: bold;">High-Resilient Art Engine</p>
         </header>
-
-        <!-- Token Field -->
-        <div id="tokenArea" class="mb-10 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-            <label style="font-size: 9px; font-weight: bold; text-transform: uppercase; color: #aaa;">Hugging Face Token (hf_...)</label>
-            <div class="flex gap-2">
-                <input type="password" id="tokenInput" placeholder="Einmalig einfügen für unlimitiert" class="flex-1 text-xs bg-transparent outline-none">
-                <button onclick="saveKey()" class="text-[9px] font-black uppercase border border-black px-3 py-1">Save</button>
-            </div>
-        </div>
 
         <!-- UI -->
         <div class="space-y-12">
             <div>
-                <label style="font-size: 10px; font-weight: 900; text-transform: uppercase; color: #ccc; letter-spacing: 0.2em;">Artist Profile Link</label>
+                <label style="font-size: 9px; font-weight: 900; text-transform: uppercase; color: #ccc; letter-spacing: 0.2em;">Artist Profile Link</label>
                 <input type="text" id="artistUrl" placeholder="https://objkt.com/users/..." class="mntg-input">
             </div>
 
             <div class="flex gap-2">
-                <button id="modeImage" onclick="setMode('image')" class="mntg-btn flex-1">Single Image</button>
-                <button id="modeGif" onclick="setMode('gif')" class="mntg-btn flex-1" style="background:#fff; color:#ccc; border:1px solid #eee;">Animated GIF</button>
+                <button id="modeImage" onclick="setMode('image')" class="mntg-btn flex-1">Image</button>
+                <button id="modeGif" onclick="setMode('gif')" class="mntg-btn flex-1" style="background:#fff; color:#ddd; border:1px solid #eee;">GIF</button>
             </div>
 
-            <button id="generateBtn" onclick="execute()" class="mntg-btn w-full text-xl py-6">Generate</button>
+            <button id="generateBtn" onclick="run()" class="mntg-btn w-full text-xl py-6">Generate</button>
 
-            <!-- Status -->
+            <!-- Status Area -->
             <div id="statusArea" class="hidden space-y-4">
-                <div class="flex justify-between text-[10px] font-black uppercase tracking-tighter">
-                    <span id="statusText" class="text-gray-400">Booting...</span>
+                <div class="flex justify-between text-[9px] font-black uppercase">
+                    <span id="statusText" class="text-gray-400 italic">Connecting...</span>
                     <span id="percentText">0%</span>
                 </div>
-                <div class="w-full bg-gray-100 h-0.5"><div id="progressBar" class="bg-black h-full transition-all duration-700" style="width: 0%"></div></div>
-                <div id="engineStatus" class="text-[8px] text-center uppercase text-gray-300 font-bold tracking-widest"></div>
+                <div style="background: #f5f5f5; width: 100%;"><div id="progressBar" class="progress-bar"></div></div>
+                <div id="engineLabel" style="font-size: 8px; text-align: center; color: #ddd; text-transform: uppercase; font-weight: bold;"></div>
             </div>
 
             <!-- Error -->
-            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center tracking-widest leading-relaxed"></div>
+            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center leading-relaxed"></div>
 
             <!-- Result -->
             <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-8">
-                <div style="background: #fcfcfc; padding: 5px; border: 1px solid #eee;">
+                <div style="background: #fcfcfc; padding: 4px; border: 1px solid #eee;">
                     <img id="resultImage" src="" alt="" class="w-full h-auto shadow-2xl" crossorigin="anonymous">
                 </div>
                 <div class="flex justify-center">
-                    <button id="downloadBtn" class="mntg-btn px-16" style="background:#fff; color:#000; border:2px solid #000;">Download Artwork</button>
+                    <button id="downloadBtn" class="mntg-btn px-12" style="background:#fff; color:#000; border:2px solid #000;">Download Artwork</button>
                 </div>
             </div>
         </div>
+
+        <footer style="margin-top: 120px; font-size: 9px; color: #ddd; text-transform: uppercase; letter-spacing: 0.3em; text-align: center;">
+            MNTG SYSTEM • MULTI-SERVER FAILOVER ACTIVE
+        </footer>
     </div>
 
-    <!-- Hidden Canvas -->
-    <canvas id="hiddenCanvas" style="display:none;"></canvas>
+    <!-- Storage for images -->
+    <canvas id="canvasProxy" style="display:none;"></canvas>
 
     <script>
         let mode = 'image';
         let artist = 'artist';
-
-        function saveKey() {
-            const val = document.getElementById('tokenInput').value.trim();
-            if(val.startsWith('hf_')) { localStorage.setItem('mntg_tk', val); alert("Token saved."); document.getElementById('tokenArea').style.opacity = "0.3"; }
-        }
-
-        window.onload = () => { if(localStorage.getItem('mntg_tk')) document.getElementById('tokenArea').style.opacity = "0.3"; };
+        const HF_TOKEN = localStorage.getItem('mntg_tk') || ""; // Falls du ihn gespeichert hast
 
         function setMode(m) {
             mode = m;
-            document.getElementById('modeImage').style = m === 'image' ? "background:#000; color:#fff;" : "background:#fff; color:#ccc; border:1px solid #eee;";
-            document.getElementById('modeGif').style = m === 'gif' ? "background:#000; color:#fff;" : "background:#fff; color:#ccc; border:1px solid #eee;";
+            document.getElementById('modeImage').style = m === 'image' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
+            document.getElementById('modeGif').style = m === 'gif' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
         }
 
         function update(p, t, eng = "") {
@@ -97,7 +90,7 @@
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('percentText').innerText = p + '%';
             document.getElementById('statusText').innerText = t;
-            if(eng) document.getElementById('engineStatus').innerText = "Routing: " + eng;
+            if(eng) document.getElementById('engineLabel').innerText = "Engine: " + eng;
         }
 
         function fail(msg) {
@@ -109,78 +102,86 @@
             document.getElementById('statusArea').classList.add('hidden');
         }
 
-        async function execute() {
-            const input = document.getElementById('artistUrl').value.trim();
-            const btn = document.getElementById('generateBtn');
-            if(!input) return;
+        async function run() {
+            const urlIn = document.getElementById('artistUrl').value.trim();
+            if(!urlIn) return;
 
-            artist = input.split('/').filter(p => p).pop() || 'artist';
-            btn.disabled = true; btn.innerText = "Processing...";
+            artist = urlIn.split('/').filter(p => p).pop() || 'artist';
+            document.getElementById('generateBtn').disabled = true;
             document.getElementById('errorArea').classList.add('hidden');
             document.getElementById('resultArea').classList.add('hidden');
 
             try {
-                update(20, "Extracting Style...");
+                update(10, "Extracting Style...");
                 const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artist}&limit=8&sort.desc=id`);
                 const tokens = await res.json();
-                if(!tokens || tokens.length === 0) throw new Error("Artist invalid.");
+                if(!tokens || tokens.length === 0) throw new Error("Artist not found.");
 
-                const prompt = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 5).join(', ');
+                const keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 5).join(', ');
 
                 if (mode === 'image') {
-                    const imgData = await getResilientImage(prompt);
-                    display(imgData);
+                    const data = await getResilientImage(keywords);
+                    show(data);
                 } else {
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        update(20 + (i*18), `Frame ${i+1}/4`);
-                        const f = await getResilientImage(prompt + ` variation ${i}`);
+                        update(10 + (i*20), `Frame ${i+1}/4`);
+                        const f = await getResilientImage(keywords + ` variation ${i}`);
                         frames.push(f);
-                        if(i < 3) await new Promise(r => setTimeout(r, 4000));
+                        await new Promise(r => setTimeout(r, 2000)); // Kleine Pause für Browser-Cooldown
                     }
                     update(95, "Merging GIF...");
                     gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5 }, (obj) => {
-                        if(!obj.error) display(obj.image);
-                        else fail("GIF Merge Failed.");
+                        if(!obj.error) show(obj.image);
+                        else fail("GIF FAILED.");
                     });
                 }
             } catch(e) { fail(e.message.toUpperCase()); }
         }
 
-        // --- DIE MULTI-ENGINE ROTATION ---
+        // --- RESILIENT ENGINE WITH TIMEOUT BYPASS ---
         async function getResilientImage(prompt) {
-            const token = localStorage.getItem('mntg_tk');
             const salt = Math.random().toString(36).substring(7);
+            const encodedPrompt = encodeURIComponent(prompt + " " + salt);
             
-            // 1. Engine: Pollinations Flux (Direkt-Injection)
-            update(50, "AI Painting...", "Engine 1 (Flux)");
-            try { return await tryLoad(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=flux`); } 
-            catch(e) {
-                // 2. Engine: Hugging Face Privat (Falls Token da)
-                if(token) {
-                    update(60, "Engine 1 Busy. Switching...", "Engine 2 (HF SDXL)");
-                    try { return await fetchHF(prompt, token); } catch(e2) { console.warn("HF fail."); }
+            // Engines in Prioritätsreihenfolge
+            const engines = [
+                { name: "Flux High", url: `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&model=flux` },
+                { name: "Airforce Turbo", url: `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&model=turbo` },
+                { name: "HF Fallback", isHF: true }
+            ];
+
+            for (let engine of engines) {
+                try {
+                    update(document.getElementById('progressBar').style.width.replace('%',''), "AI Painting...", engine.name);
+                    
+                    if (engine.isHF && HF_TOKEN) {
+                        return await fetchHF(prompt, HF_TOKEN);
+                    } else if (!engine.isHF) {
+                        return await loadImageWithTimeout(engine.url, 18000); // 18 Sek. pro Versuch
+                    }
+                } catch (err) {
+                    console.warn(`Engine ${engine.name} failed or timed out.`);
                 }
-                // 3. Engine: Pollinations Turbo (Der schnelle Fallback)
-                update(70, "Backup Engine...", "Engine 3 (Turbo)");
-                return await tryLoad(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=turbo`);
             }
+            throw new Error("Sämtliche Engines aktuell überlastet. Warte 30s.");
         }
 
-        function tryLoad(url) {
+        function loadImageWithTimeout(url, ms) {
             return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => { img.src = ""; reject(new Error("Timeout")); }, ms);
                 const img = new Image();
                 img.crossOrigin = "anonymous";
                 img.onload = () => {
-                    const canvas = document.getElementById('hiddenCanvas');
+                    clearTimeout(timeout);
+                    const canvas = document.getElementById('canvasProxy');
                     const ctx = canvas.getContext('2d');
                     canvas.width = 512; canvas.height = 512;
                     ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL("image/png")); // Konvertiert Bild in Daten-String (Base64)
+                    resolve(canvas.toDataURL("image/png"));
                 };
-                img.onerror = () => reject();
+                img.onerror = () => { clearTimeout(timeout); reject(); };
                 img.src = url;
-                setTimeout(() => reject(), 35000);
             });
         }
 
@@ -199,7 +200,7 @@
             });
         }
 
-        function display(src) {
+        function show(src) {
             const img = document.getElementById('resultImage');
             img.src = src;
             document.getElementById('resultArea').classList.remove('hidden');
@@ -210,7 +211,7 @@
             document.getElementById('downloadBtn').onclick = () => {
                 const a = document.createElement('a');
                 a.href = src;
-                a.download = `mntgstyle_${artist}_${Date.now()}.${mode === 'image' ? 'png' : 'gif'}`;
+                a.download = `mntgstyle_${artist}_${Date.now()}.png`;
                 a.click();
             };
         }
