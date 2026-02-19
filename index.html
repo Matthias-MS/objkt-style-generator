@@ -7,16 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
-        /* MNTG PURE MINIMALISM */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
         body { background: #fff; color: #000; font-family: 'Inter', sans-serif; }
-        .mntg-header { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-size: 3.5rem; line-height: 1; }
+        .mntg-header { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-size: 3.5rem; line-height: 0.9; }
         .mntg-input { border-bottom: 2px solid #000; padding: 1rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; border-radius: 0; }
         .mntg-btn { background: #000; color: #fff; text-transform: uppercase; font-weight: 900; padding: 1.25rem; transition: 0.2s; letter-spacing: 0.1em; font-size: 0.8rem; }
-        .mntg-btn:disabled { background: #eee; color: #ccc; cursor: not-allowed; }
-        
+        .prompt-box { background: #f9f9f9; border-left: 3px solid #000; padding: 1rem; font-family: monospace; font-size: 11px; color: #666; line-height: 1.4; overflow-wrap: break-word; }
         @keyframes blink { 0%, 100% { background: #000; } 50% { background: #ff0000; } }
         .error-blink { animation: blink 0.4s ease-in-out 2; }
-        .progress-bar { height: 1px; background: #000; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body class="antialiased">
@@ -25,49 +23,57 @@
         <!-- Header -->
         <header class="mb-20">
             <h1 class="mntg-header">Objkt Style Gen <span style="font-style: normal; font-size: 0.7rem; opacity: 0.2; letter-spacing: 0;">by MNTG</span></h1>
-            <p style="text-transform: uppercase; font-size: 9px; letter-spacing: 0.5em; color: #bbb; margin-top: 10px; font-weight: bold;">High-Resilient Art Engine</p>
+            <p style="text-transform: uppercase; font-size: 9px; letter-spacing: 0.5em; color: #bbb; margin-top: 15px; font-weight: bold;">Experimental Prompt Engine</p>
         </header>
 
-        <!-- UI -->
         <div class="space-y-12">
+            <!-- Artist Input -->
             <div>
                 <label style="font-size: 9px; font-weight: 900; text-transform: uppercase; color: #ccc; letter-spacing: 0.2em;">Artist Profile Link</label>
                 <input type="text" id="artistUrl" placeholder="https://objkt.com/users/..." class="mntg-input">
             </div>
 
+            <!-- Mode Selection -->
             <div class="flex gap-2">
                 <button id="modeImage" onclick="setMode('image')" class="mntg-btn flex-1">Image</button>
                 <button id="modeGif" onclick="setMode('gif')" class="mntg-btn flex-1" style="background:#fff; color:#ddd; border:1px solid #eee;">GIF</button>
             </div>
 
-            <button id="generateBtn" onclick="run()" class="mntg-btn w-full text-xl py-6">Generate</button>
+            <button id="generateBtn" onclick="run()" class="mntg-btn w-full text-xl py-6 shadow-2xl">Generate</button>
 
-            <!-- Status Area -->
-            <div id="statusArea" class="hidden space-y-4">
-                <div class="flex justify-between text-[9px] font-black uppercase">
-                    <span id="statusText" class="text-gray-400 italic">Connecting...</span>
-                    <span id="percentText">0%</span>
+            <!-- Status & Prompt Monitor -->
+            <div id="statusArea" class="hidden space-y-6">
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[9px] font-black uppercase">
+                        <span id="statusText">Processing</span>
+                        <span id="percentText">0%</span>
+                    </div>
+                    <div style="background: #f5f5f5; width: 100%; height: 1px;"><div id="progressBar" style="background: #000; height: 1px; width: 0%; transition: width 0.3s;"></div></div>
                 </div>
-                <div style="background: #f5f5f5; width: 100%;"><div id="progressBar" class="progress-bar"></div></div>
-                <div id="engineLabel" style="font-size: 8px; text-align: center; color: #ddd; text-transform: uppercase; font-weight: bold;"></div>
+
+                <!-- Prompt Display -->
+                <div class="space-y-2">
+                    <label style="font-size: 8px; font-weight: 900; text-transform: uppercase; color: #aaa;">Generated AI Prompt</label>
+                    <div id="promptDisplay" class="prompt-box">Warte auf Daten...</div>
+                </div>
             </div>
 
             <!-- Error -->
-            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center leading-relaxed"></div>
+            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center tracking-widest leading-relaxed"></div>
 
             <!-- Result -->
-            <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-8">
+            <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-8 animate-in fade-in">
                 <div style="background: #fcfcfc; padding: 4px; border: 1px solid #eee;">
                     <img id="resultImage" src="" alt="" class="w-full h-auto shadow-2xl" crossorigin="anonymous">
                 </div>
                 <div class="flex justify-center">
-                    <button id="downloadBtn" class="mntg-btn px-12" style="background:#fff; color:#000; border:2px solid #000;">Download Artwork</button>
+                    <button id="downloadBtn" class="mntg-btn px-16" style="background:#fff; color:#000; border:2px solid #000;">Download Artwork</button>
                 </div>
             </div>
         </div>
 
-        <footer style="margin-top: 120px; font-size: 9px; color: #ddd; text-transform: uppercase; letter-spacing: 0.3em; text-align: center;">
-            MNTG SYSTEM • MULTI-SERVER FAILOVER ACTIVE
+        <footer style="margin-top: 150px; font-size: 9px; color: #ddd; text-transform: uppercase; letter-spacing: 0.3em; text-align: center;">
+            MNTG System • Multi-Server Routing Enabled
         </footer>
     </div>
 
@@ -76,8 +82,7 @@
 
     <script>
         let mode = 'image';
-        let artist = 'artist';
-        const HF_TOKEN = localStorage.getItem('mntg_tk') || ""; // Falls du ihn gespeichert hast
+        let artistName = 'artist';
 
         function setMode(m) {
             mode = m;
@@ -85,12 +90,12 @@
             document.getElementById('modeGif').style = m === 'gif' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
         }
 
-        function update(p, t, eng = "") {
+        function updateUI(p, t, prompt = "") {
             document.getElementById('statusArea').classList.remove('hidden');
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('percentText').innerText = p + '%';
             document.getElementById('statusText').innerText = t;
-            if(eng) document.getElementById('engineLabel').innerText = "Engine: " + eng;
+            if(prompt) document.getElementById('promptDisplay').innerText = prompt;
         }
 
         function fail(msg) {
@@ -106,31 +111,35 @@
             const urlIn = document.getElementById('artistUrl').value.trim();
             if(!urlIn) return;
 
-            artist = urlIn.split('/').filter(p => p).pop() || 'artist';
+            artistName = urlIn.split('/').filter(p => p).pop() || 'artist';
             document.getElementById('generateBtn').disabled = true;
             document.getElementById('errorArea').classList.add('hidden');
             document.getElementById('resultArea').classList.add('hidden');
 
             try {
-                update(10, "Extracting Style...");
-                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artist}&limit=8&sort.desc=id`);
+                updateUI(10, "Accessing Artist Style...");
+                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artistName}&limit=15&sort.desc=id`);
                 const tokens = await res.json();
-                if(!tokens || tokens.length === 0) throw new Error("Artist not found.");
+                if(!tokens || tokens.length === 0) throw new Error("Artist address invalid or no tokens.");
 
-                const keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 5).join(', ');
+                // Style Analyse aus Metadaten
+                const titles = tokens.map(t => t.metadata?.name || '').join(' ');
+                const keywords = titles.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 12).join(', ');
+                
+                const finalPrompt = `${keywords}, abstract masterpiece, highly detailed digital art, in the unique style of ${artistName}, fine textures, artistic composition, 8k resolution, no text`;
 
                 if (mode === 'image') {
-                    const data = await getResilientImage(keywords);
+                    const data = await getResilientImage(finalPrompt);
                     show(data);
                 } else {
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        update(10 + (i*20), `Frame ${i+1}/4`);
-                        const f = await getResilientImage(keywords + ` variation ${i}`);
+                        updateUI(10 + (i*20), `Rendering Frame ${i+1}/4`, finalPrompt + ` [Frame ${i}]`);
+                        const f = await getResilientImage(finalPrompt + ` variation ${i}`);
                         frames.push(f);
-                        await new Promise(r => setTimeout(r, 2000)); // Kleine Pause für Browser-Cooldown
+                        await new Promise(r => setTimeout(r, 2000));
                     }
-                    update(95, "Merging GIF...");
+                    updateUI(95, "Merging Animation...");
                     gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5 }, (obj) => {
                         if(!obj.error) show(obj.image);
                         else fail("GIF FAILED.");
@@ -139,39 +148,29 @@
             } catch(e) { fail(e.message.toUpperCase()); }
         }
 
-        // --- RESILIENT ENGINE WITH TIMEOUT BYPASS ---
         async function getResilientImage(prompt) {
             const salt = Math.random().toString(36).substring(7);
-            const encodedPrompt = encodeURIComponent(prompt + " " + salt);
-            
-            // Engines in Prioritätsreihenfolge
             const engines = [
-                { name: "Flux High", url: `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&model=flux` },
-                { name: "Airforce Turbo", url: `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&model=turbo` },
-                { name: "HF Fallback", isHF: true }
+                { name: "Flux High", url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=flux` },
+                { name: "Turbo Mode", url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=turbo` }
             ];
 
             for (let engine of engines) {
                 try {
-                    update(document.getElementById('progressBar').style.width.replace('%',''), "AI Painting...", engine.name);
-                    
-                    if (engine.isHF && HF_TOKEN) {
-                        return await fetchHF(prompt, HF_TOKEN);
-                    } else if (!engine.isHF) {
-                        return await loadImageWithTimeout(engine.url, 18000); // 18 Sek. pro Versuch
-                    }
+                    updateUI(document.getElementById('progressBar').style.width.replace('%',''), `Using ${engine.name}...`, prompt);
+                    return await loadImage(engine.url);
                 } catch (err) {
-                    console.warn(`Engine ${engine.name} failed or timed out.`);
+                    console.warn(engine.name + " busy...");
                 }
             }
-            throw new Error("Sämtliche Engines aktuell überlastet. Warte 30s.");
+            throw new Error("Engines busy. Please wait 10 seconds.");
         }
 
-        function loadImageWithTimeout(url, ms) {
+        function loadImage(url) {
             return new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => { img.src = ""; reject(new Error("Timeout")); }, ms);
                 const img = new Image();
                 img.crossOrigin = "anonymous";
+                const timeout = setTimeout(() => { img.src = ""; reject(); }, 25000);
                 img.onload = () => {
                     clearTimeout(timeout);
                     const canvas = document.getElementById('canvasProxy');
@@ -182,21 +181,6 @@
                 };
                 img.onerror = () => { clearTimeout(timeout); reject(); };
                 img.src = url;
-            });
-        }
-
-        async function fetchHF(prompt, token) {
-            const res = await fetch("https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ inputs: prompt }),
-            });
-            if(!res.ok) throw new Error();
-            const blob = await res.blob();
-            return new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
             });
         }
 
@@ -211,7 +195,7 @@
             document.getElementById('downloadBtn').onclick = () => {
                 const a = document.createElement('a');
                 a.href = src;
-                a.download = `mntgstyle_${artist}_${Date.now()}.png`;
+                a.download = `mntgstyle_${artistName}_${Date.now()}.png`;
                 a.click();
             };
         }
