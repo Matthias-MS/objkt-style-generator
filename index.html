@@ -16,7 +16,7 @@
 <body class="bg-gray-50 text-gray-900 font-sans min-h-screen">
 
     <div class="max-w-3xl mx-auto py-12 px-4">
-        <!-- Header - Original Design -->
+        <!-- Header -->
         <header class="text-center mb-12">
             <h1 class="text-4xl font-extrabold tracking-tight mb-2">
                 Objkt Artist Style Gen<span class="align-super text-sm ml-1">by MNTG</span>
@@ -59,7 +59,7 @@
                     <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                         <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
                     </div>
-                    <!-- Modell-Anzeige -->
+                    <!-- Modell-Anzeige (Rotation) -->
                     <div id="modelStatus" class="text-center text-[10px] mt-3 p-2 bg-gray-100 text-gray-500 rounded-lg font-mono uppercase tracking-widest hidden animate-pulse"></div>
                 </div>
 
@@ -85,10 +85,16 @@
     </div>
 
     <script>
-        // HIER DEINEN HUGGING FACE API KEY EINTRAGEN
-        const HF_API_KEY = "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"; 
+        const HF_TOKEN = "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";
 
         let currentMode = 'image';
+        
+        const aiModels = [
+            { id: 'flux', name: 'FLUX Schnell' },
+            { id: 'turbo', name: 'Z-Image Turbo' },
+            { id: 'flux-realism', name: 'Imagen 4 (api.airforce)' },
+            { id: 'any-dark', name: 'GPT Image 1 Mini' }
+        ];
 
         function setMode(mode) {
             currentMode = mode;
@@ -102,7 +108,7 @@
             document.getElementById('percentText').innerText = percent + '%';
             document.getElementById('statusText').innerText = text;
             const ms = document.getElementById('modelStatus');
-            if(modelName) { ms.innerText = modelName; ms.classList.remove('hidden'); }
+            if(modelName) { ms.innerText = `Versuche alternative Methode (${modelName})`; ms.classList.remove('hidden'); }
             else { ms.classList.add('hidden'); }
         }
 
@@ -130,68 +136,89 @@
             btn.innerText = "Verarbeite...";
 
             try {
-                updateProgress(10, "Lade Artist-Metadaten...");
+                updateProgress(10, "Lade Artist-Daten...");
                 const response = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=12&sort.desc=id`);
                 const tokens = await response.json();
                 if (!tokens || tokens.length === 0) throw new Error("Keine Werke gefunden.");
 
-                const keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 4).slice(0, 10).join(', ');
+                const keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 4).slice(0, 10);
 
                 if (currentMode === 'image') {
-                    const imgUrl = await rotationBypass(keywords);
+                    const imgUrl = await fullRotation(keywords.join(', '));
                     displayResult(imgUrl);
                 } else {
                     const frames = [];
                     for(let i=0; i<4; i++) {
                         updateProgress(20 + (i*20), `Frame ${i+1}/4...`);
                         if(i > 0) await new Promise(r => setTimeout(r, 4000)); 
-                        frames.push(await rotationBypass(keywords + ` phase ${i}`));
+                        frames.push(await fullRotation(keywords.join(', ') + ` variation ${i}`));
                     }
                     displayResult(frames);
                 }
             } catch (err) {
-                showError("System über MNTG HuggingFace API überlastet oder Fehler: " + err.message);
+                showError("System über MNTG HuggingFace API überlastet: " + err.message);
             }
         }
 
-        async function rotationBypass(prompt) {
-            // Schritt 1: Pollinations (Engine 1)
+        async function fullRotation(prompt) {
+            // 1. Erst alle Standard-Systeme probieren
+            for (let i = 0; i < aiModels.length; i++) {
+                const model = aiModels[i];
+                updateProgress(60, "KI generiert...", model.name);
+                try {
+                    return await fetchPollinations(prompt, model.id);
+                } catch (e) {
+                    console.warn(`${model.name} fehlgeschlagen...`);
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+
+            // 2. Ultimativer Fallback: Hugging Face
+            updateProgress(80, "Nutze MNTG HuggingFace API...", "SDXL Engine");
             try {
-                updateProgress(60, "KI generiert...", "Engine 1 (Pollinations)");
-                return await fetchPollinations(prompt);
-            } catch (e) {
-                // Schritt 2: Hugging Face (Engine 2)
-                updateProgress(65, "Nutze MNTG HuggingFace API...", "Engine 2 (HuggingFace)");
                 return await fetchHuggingFace(prompt);
+            } catch (e) {
+                throw new Error("Alle Systeme inklusive HF API überlastet.");
             }
         }
 
-        function fetchPollinations(prompt) {
+        function fetchPollinations(prompt, modelId) {
             return new Promise((resolve, reject) => {
-                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${Math.random()}&nologo=true`;
+                const seed = Math.floor(Math.random() * 1000000);
+                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&model=${modelId}&nologo=true&t=${Date.now()}`;
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-                const timeout = setTimeout(() => reject(new Error("Timeout")), 30000);
+                const timeout = setTimeout(() => { img.src = ""; reject(new Error("Timeout")); }, 30000);
                 img.onload = () => { clearTimeout(timeout); resolve(url); };
-                img.onerror = () => reject(new Error("Limit"));
+                img.onerror = () => { clearTimeout(timeout); reject(new Error("Limit")); };
                 img.src = url;
             });
         }
 
         async function fetchHuggingFace(prompt) {
-            // Wir nutzen SDXL via Hugging Face Inference API
-            const response = await fetch("https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0", {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${HF_API_KEY}`
-                },
-                body: JSON.stringify({ inputs: prompt }),
-            });
+            // Wir nutzen SDXL. Falls das Modell schläft, versuchen wir es bis zu 3 mal.
+            for(let attempt = 0; attempt < 3; attempt++) {
+                const response = await fetch("https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0", {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${HF_TOKEN}`
+                    },
+                    body: JSON.stringify({ inputs: prompt }),
+                });
 
-            if (!response.ok) throw new Error("Hugging Face Limit erreicht.");
-            const blob = await response.blob();
-            return URL.createObjectURL(blob);
+                if (response.status === 503) { // Modell lädt noch
+                    updateProgress(85, "Hugging Face Modell wacht auf...", "Bitte warten...");
+                    await new Promise(r => setTimeout(r, 8000));
+                    continue;
+                }
+
+                if (!response.ok) throw new Error("HF API Error");
+                
+                const blob = await response.blob();
+                return URL.createObjectURL(blob);
+            }
+            throw new Error("Hugging Face Modell konnte nicht gestartet werden.");
         }
 
         function displayResult(source) {
