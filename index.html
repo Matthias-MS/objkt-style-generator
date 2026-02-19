@@ -10,9 +10,11 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
         body { background: #fff; color: #000; font-family: 'Inter', sans-serif; }
         .mntg-header { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-size: 3.5rem; line-height: 0.9; }
-        .mntg-input { border-bottom: 2px solid #000; padding: 1rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; border-radius: 0; }
+        .mntg-input { border-bottom: 2px solid #000; padding: 1.2rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; border-radius: 0; }
         .mntg-btn { background: #000; color: #fff; text-transform: uppercase; font-weight: 900; padding: 1.25rem; transition: 0.2s; letter-spacing: 0.1em; font-size: 0.8rem; }
-        .prompt-box { background: #f9f9f9; border-left: 3px solid #000; padding: 1rem; font-family: monospace; font-size: 11px; color: #666; line-height: 1.4; overflow-wrap: break-word; }
+        .mntg-btn:disabled { opacity: 0.2; }
+        .prompt-monitor { background: #f9f9f9; border: 1px solid #eee; padding: 1.5rem; font-family: monospace; font-size: 11px; color: #555; line-height: 1.5; position: relative; }
+        .prompt-monitor::before { content: "AI PROMPT LOG"; position: absolute; top: -7px; left: 10px; background: #000; color: #fff; padding: 2px 6px; font-size: 8px; font-weight: 900; }
         @keyframes blink { 0%, 100% { background: #000; } 50% { background: #ff0000; } }
         .error-blink { animation: blink 0.4s ease-in-out 2; }
     </style>
@@ -23,7 +25,7 @@
         <!-- Header -->
         <header class="mb-20">
             <h1 class="mntg-header">Objkt Style Gen <span style="font-style: normal; font-size: 0.7rem; opacity: 0.2; letter-spacing: 0;">by MNTG</span></h1>
-            <p style="text-transform: uppercase; font-size: 9px; letter-spacing: 0.5em; color: #bbb; margin-top: 15px; font-weight: bold;">Experimental Prompt Engine</p>
+            <p style="text-transform: uppercase; font-size: 9px; letter-spacing: 0.5em; color: #bbb; margin-top: 15px; font-weight: bold;">Permanent Prompt Engine</p>
         </header>
 
         <div class="space-y-12">
@@ -35,39 +37,40 @@
 
             <!-- Mode Selection -->
             <div class="flex gap-2">
-                <button id="modeImage" onclick="setMode('image')" class="mntg-btn flex-1">Image</button>
+                <button id="modeImage" onclick="setMode('image')" class="mntg-btn flex-1">Single Image</button>
                 <button id="modeGif" onclick="setMode('gif')" class="mntg-btn flex-1" style="background:#fff; color:#ddd; border:1px solid #eee;">GIF</button>
             </div>
 
-            <button id="generateBtn" onclick="run()" class="mntg-btn w-full text-xl py-6 shadow-2xl">Generate</button>
+            <button id="generateBtn" onclick="run()" class="mntg-btn w-full text-xl py-6">Generate</button>
 
-            <!-- Status & Prompt Monitor -->
-            <div id="statusArea" class="hidden space-y-6">
-                <div class="space-y-2">
-                    <div class="flex justify-between text-[9px] font-black uppercase">
-                        <span id="statusText">Processing</span>
-                        <span id="percentText">0%</span>
-                    </div>
-                    <div style="background: #f5f5f5; width: 100%; height: 1px;"><div id="progressBar" style="background: #000; height: 1px; width: 0%; transition: width 0.3s;"></div></div>
+            <!-- Status Area (Wird während des Ladens gezeigt) -->
+            <div id="statusArea" class="hidden space-y-4">
+                <div class="flex justify-between text-[9px] font-black uppercase tracking-widest">
+                    <span id="statusText">Extracting Style</span>
+                    <span id="percentText">0%</span>
                 </div>
-
-                <!-- Prompt Display -->
-                <div class="space-y-2">
-                    <label style="font-size: 8px; font-weight: 900; text-transform: uppercase; color: #aaa;">Generated AI Prompt</label>
-                    <div id="promptDisplay" class="prompt-box">Warte auf Daten...</div>
-                </div>
+                <div style="background: #f5f5f5; width: 100%; height: 1px;"><div id="progressBar" style="background: #000; height: 1px; width: 0%; transition: width 0.3s;"></div></div>
             </div>
 
             <!-- Error -->
             <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center tracking-widest leading-relaxed"></div>
 
-            <!-- Result -->
-            <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-8 animate-in fade-in">
+            <!-- Result & Permanent Prompt -->
+            <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-10 animate-in fade-in">
+                
+                <!-- Das generierte Bild -->
                 <div style="background: #fcfcfc; padding: 4px; border: 1px solid #eee;">
                     <img id="resultImage" src="" alt="" class="w-full h-auto shadow-2xl" crossorigin="anonymous">
                 </div>
+
+                <!-- DOWNLOAD BUTTON -->
                 <div class="flex justify-center">
                     <button id="downloadBtn" class="mntg-btn px-16" style="background:#fff; color:#000; border:2px solid #000;">Download Artwork</button>
+                </div>
+
+                <!-- PERMANENTER PROMPT MONITOR (Bleibt stehen!) -->
+                <div class="pt-6">
+                    <div id="promptDisplay" class="prompt-monitor">Warte auf Daten...</div>
                 </div>
             </div>
         </div>
@@ -81,11 +84,11 @@
     <canvas id="canvasProxy" style="display:none;"></canvas>
 
     <script>
-        let mode = 'image';
+        let currentMode = 'image';
         let artistName = 'artist';
 
         function setMode(m) {
-            mode = m;
+            currentMode = m;
             document.getElementById('modeImage').style = m === 'image' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
             document.getElementById('modeGif').style = m === 'gif' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
         }
@@ -95,7 +98,9 @@
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('percentText').innerText = p + '%';
             document.getElementById('statusText').innerText = t;
-            if(prompt) document.getElementById('promptDisplay').innerText = prompt;
+            if(prompt) {
+                document.getElementById('promptDisplay').innerText = prompt;
+            }
         }
 
         function fail(msg) {
@@ -117,31 +122,33 @@
             document.getElementById('resultArea').classList.add('hidden');
 
             try {
-                updateUI(10, "Accessing Artist Style...");
-                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artistName}&limit=15&sort.desc=id`);
+                updateUI(10, "Accessing Blockchain Style...");
+                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artistName}&limit=12&sort.desc=id`);
                 const tokens = await res.json();
+                
                 if(!tokens || tokens.length === 0) throw new Error("Artist address invalid or no tokens.");
 
-                // Style Analyse aus Metadaten
-                const titles = tokens.map(t => t.metadata?.name || '').join(' ');
-                const keywords = titles.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 12).join(', ');
+                // Metadaten extrahieren
+                const textPool = tokens.map(t => t.metadata?.name || '').join(' ');
+                const keywords = textPool.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 10).join(', ');
                 
-                const finalPrompt = `${keywords}, abstract masterpiece, highly detailed digital art, in the unique style of ${artistName}, fine textures, artistic composition, 8k resolution, no text`;
+                const finalPrompt = `Unique digital art, style inspired by ${keywords}, abstract masterpiece, highly detailed textures, artistic composition, no text, no signatures`;
 
-                if (mode === 'image') {
+                if (currentMode === 'image') {
+                    updateUI(50, "Generating Art...", finalPrompt);
                     const data = await getResilientImage(finalPrompt);
-                    show(data);
+                    show(data, finalPrompt);
                 } else {
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        updateUI(10 + (i*20), `Rendering Frame ${i+1}/4`, finalPrompt + ` [Frame ${i}]`);
-                        const f = await getResilientImage(finalPrompt + ` variation ${i}`);
+                        updateUI(10 + (i*20), `Frame ${i+1}/4`, finalPrompt + ` [Variation ${i}]`);
+                        const f = await getResilientImage(finalPrompt + ` seed_variation_${i}`);
                         frames.push(f);
-                        await new Promise(r => setTimeout(r, 2000));
+                        if(i < 3) await new Promise(r => setTimeout(r, 4000));
                     }
-                    updateUI(95, "Merging Animation...");
+                    updateUI(95, "Merging Animation...", finalPrompt);
                     gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5 }, (obj) => {
-                        if(!obj.error) show(obj.image);
+                        if(!obj.error) show(obj.image, finalPrompt);
                         else fail("GIF FAILED.");
                     });
                 }
@@ -152,25 +159,24 @@
             const salt = Math.random().toString(36).substring(7);
             const engines = [
                 { name: "Flux High", url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=flux` },
-                { name: "Turbo Mode", url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=turbo` }
+                { name: "Turbo Engine", url: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=turbo` }
             ];
 
             for (let engine of engines) {
                 try {
-                    updateUI(document.getElementById('progressBar').style.width.replace('%',''), `Using ${engine.name}...`, prompt);
                     return await loadImage(engine.url);
                 } catch (err) {
                     console.warn(engine.name + " busy...");
                 }
             }
-            throw new Error("Engines busy. Please wait 10 seconds.");
+            throw new Error("Engines busy. Please wait 30 seconds.");
         }
 
         function loadImage(url) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-                const timeout = setTimeout(() => { img.src = ""; reject(); }, 25000);
+                const timeout = setTimeout(() => { img.src = ""; reject(); }, 35000);
                 img.onload = () => {
                     clearTimeout(timeout);
                     const canvas = document.getElementById('canvasProxy');
@@ -184,9 +190,13 @@
             });
         }
 
-        function show(src) {
+        function show(src, prompt) {
             const img = document.getElementById('resultImage');
+            const promptBox = document.getElementById('promptDisplay');
+            
             img.src = src;
+            promptBox.innerText = prompt; // Setzt den Prompt dauerhaft in die Box
+            
             document.getElementById('resultArea').classList.remove('hidden');
             document.getElementById('statusArea').classList.add('hidden');
             document.getElementById('generateBtn').disabled = false;
@@ -195,7 +205,7 @@
             document.getElementById('downloadBtn').onclick = () => {
                 const a = document.createElement('a');
                 a.href = src;
-                a.download = `mntgstyle_${artistName}_${Date.now()}.png`;
+                a.download = `mntgstyle_${artistName}.png`;
                 a.click();
             };
         }
