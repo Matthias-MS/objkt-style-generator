@@ -19,10 +19,10 @@
 <body class="bg-gray-50 text-gray-900 font-sans min-h-screen">
 
     <div class="max-w-3xl mx-auto py-12 px-4">
-        <!-- Header -->
+        <!-- Header - Zurückgesetzt auf Original-Design -->
         <header class="text-center mb-12">
             <h1 class="text-4xl font-extrabold tracking-tight mb-2">
-                Objkt Artist Style Gen<span class="align-super text-sm ml-1 text-indigo-600">by MNTG</span>
+                Objkt Artist Style Gen<span class="align-super text-sm ml-1">by MNTG</span>
             </h1>
             <p class="text-gray-500">Erstelle transformative KI-Kunst basierend auf dem Stil eines Objkt-Artists.</p>
         </header>
@@ -89,8 +89,8 @@
             </div>
         </div>
 
-        <!-- Footer Info -->
-        <footer class="mt-12 text-center text-[10px] text-gray-400 uppercase tracking-[0.15em] leading-relaxed">
+        <!-- Footer Info - Exakt wie gefordert -->
+        <footer class="mt-12 text-center text-xs text-gray-400 uppercase tracking-widest leading-relaxed">
             Nutzt die Objkt API & Pollinations.ai (Open Source SDXL) • Kostenlose Webapp • Datenschutzkonform • by MNTG
         </footer>
     </div>
@@ -118,7 +118,7 @@
             const err = document.getElementById('errorArea');
             err.innerText = msg;
             err.classList.remove('hidden', 'error-blink');
-            void err.offsetWidth; // Trigger reflow
+            void err.offsetWidth; 
             err.classList.add('error-blink');
             document.getElementById('statusArea').classList.add('hidden');
             document.getElementById('generateBtn').disabled = false;
@@ -136,49 +136,46 @@
 
             if (!input) { showError("Bitte gib einen Link oder eine Adresse ein."); return; }
 
-            // Extrahiere Adresse (der letzte Teil nach dem Schrägstrich)
+            // Extraktion der Wallet-Adresse aus der URL
             let address = input.split('/').filter(p => p).pop();
 
             btn.disabled = true;
             btn.innerText = "Verarbeite...";
 
             try {
-                updateProgress(10, "Verbindung zur Blockchain...");
+                updateProgress(10, "Verbindung zur Tezos Blockchain...");
 
-                // Schritt 1: Token-Metadaten via TzKT API holen (Creator Filter)
-                // Wir holen die letzten 15 erstellten Tokens dieses Creators
-                const response = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=15&sort.desc=id`);
-                if (!response.ok) throw new Error("API-Verbindung fehlgeschlagen.");
+                const response = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=12&sort.desc=id`);
+                if (!response.ok) throw new Error("Blockchain-Daten nicht erreichbar.");
                 
                 const tokens = await response.json();
                 
                 if (!tokens || tokens.length === 0) {
-                    throw new Error("Keine NFTs gefunden. Prüfe, ob die Adresse korrekt ist (tz... oder KT...).");
+                    throw new Error("Keine NFTs unter dieser Adresse gefunden.");
                 }
 
-                // Schritt 2: Analyse-Animation
+                // Analyse-Animation
                 for(let i=0; i < tokens.length; i++) {
                     let p = 10 + Math.floor((i/tokens.length) * 30);
-                    updateProgress(p, "Analysiere Stil...", `NFT ${i+1}/${tokens.length} erfasst`);
+                    updateProgress(p, "Analysiere Stil...", `Metadaten von Werk ${i+1} geladen`);
                     await new Promise(r => setTimeout(r, 40));
                 }
 
-                // Schritt 3: Prompt erstellen
-                updateProgress(50, "Erstelle Stil-Profil...");
+                updateProgress(50, "Erstelle KI-Stilprofil...");
                 const prompt = createPromptFromTokens(tokens);
 
                 if (currentMode === 'image') {
-                    updateProgress(70, "KI generiert Bild...");
+                    updateProgress(75, "KI berechnet Bild (bitte warten)...");
                     const imgUrl = await generateImage(prompt);
                     displayResult(imgUrl);
                 } else {
-                    updateProgress(60, "KI generiert GIF-Frames...");
+                    updateProgress(60, "KI berechnet GIF-Frames...");
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        updateProgress(60 + (i*10), `Frame ${i+1}/4 wird berechnet...`);
-                        frames.push(await generateImage(prompt + `, variation ${i}`));
+                        updateProgress(60 + (i*8), `Frame ${i+1}/4 wird berechnet...`);
+                        frames.push(await generateImage(prompt + `, movement variation ${i}`));
                     }
-                    updateProgress(95, "GIF wird finalisiert...");
+                    updateProgress(95, "GIF wird zusammengesetzt...");
                     assembleGif(frames);
                 }
 
@@ -188,26 +185,32 @@
         }
 
         function createPromptFromTokens(tokens) {
-            // Sammle Begriffe aus allen Namen und Beschreibungen
             const textPool = tokens.map(t => `${t.metadata?.name || ''} ${t.metadata?.description || ''}`).join(' ');
-            // Bereinige Text (nur Buchstaben, keine Sonderzeichen)
-            const keywords = textPool.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/).filter(w => w.length > 3).slice(0, 40).join(', ');
-            
-            return `Professional digital art, unique masterpiece, inspired by the style and essence of ${keywords}, abstract artistic composition, high quality, 8k resolution, transformative original work, no text, no signatures --v 6`;
+            const keywords = textPool.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/).filter(w => w.length > 3).slice(0, 35).join(', ');
+            return `Abstract digital art, unique masterpiece, inspired by the essence of ${keywords}, vibrant colors, artistic brushstrokes, high quality, no text, no signatures, transformative --v 6`;
         }
 
+        // Korrigierte Funktion gegen Hängenbleiben bei 70/75%
         async function generateImage(prompt) {
             const seed = Math.floor(Math.random() * 1000000);
             const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&nologo=true`;
             
-            // Bild vorladen
-            await new Promise((resolve) => {
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.onload = resolve;
-                img.src = url;
-            });
-            return url;
+            // Timeout-Versuch: Wir warten maximal 25 Sekunden auf die KI
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+                const imgResponse = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!imgResponse.ok) throw new Error("KI-Server antwortet nicht");
+                return url; // Die URL ist gültig, wenn der Fetch durchgeht
+            } catch (e) {
+                // Fallback: Wenn Fetch fehlschlägt, geben wir die URL trotzdem zurück
+                // und lassen das <img> Tag den Rest erledigen
+                console.warn("Pre-fetch failed, using direct URL");
+                return url;
+            }
         }
 
         function assembleGif(images) {
@@ -241,7 +244,7 @@
             downloadBtn.onclick = () => {
                 const link = document.createElement('a');
                 link.href = source;
-                link.download = `mntg-style-gen-${Date.now()}.png`;
+                link.download = `mntg-art-${Date.now()}.png`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
