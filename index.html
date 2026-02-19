@@ -7,164 +7,199 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.4.5/gifshot.min.js"></script>
     <style>
-        /* MNTG MINIMALIST STYLE */
-        body { background-color: #ffffff; color: #000; font-family: 'Helvetica', sans-serif; overflow-x: hidden; }
-        .mntg-header { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-size: 3.5rem; line-height: 0.9; }
-        .mntg-input { border-bottom: 2px solid #000; padding: 1.5rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; border-radius: 0; }
-        .mntg-btn { background: #000; color: #fff; text-transform: uppercase; font-weight: 900; padding: 1.5rem; transition: 0.2s; letter-spacing: 0.1em; font-size: 0.9rem; width: 100%; }
-        .mntg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        
-        @keyframes blink-red {
-            0%, 100% { background-color: #000; }
-            50% { background-color: #ff0000; }
-        }
-        .error-blink { animation: blink-red 0.4s ease-in-out 2; }
-        .progress-line { height: 2px; background: #000; width: 0%; transition: width 0.8s ease-in-out; }
+        body { background: #fff; color: #000; font-family: sans-serif; }
+        .mntg-header { font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-size: 3.5rem; line-height: 1; }
+        .mntg-input { border-bottom: 2px solid #000; padding: 1rem 0; font-size: 1.5rem; width: 100%; outline: none; background: transparent; }
+        .mntg-btn { background: #000; color: #fff; text-transform: uppercase; font-weight: 900; padding: 1.25rem; transition: 0.2s; letter-spacing: 0.1em; font-size: 0.8rem; }
+        @keyframes blink { 0%, 100% { background: #000; } 50% { background: #ff0000; } }
+        .error-blink { animation: blink 0.4s ease-in-out 2; }
     </style>
 </head>
 <body class="antialiased">
 
-    <div class="max-w-2xl mx-auto py-24 px-8">
+    <div class="max-w-2xl mx-auto py-20 px-8">
         <!-- Header -->
-        <header class="mb-20">
-            <h1 class="mntg-header text-black">Objkt Style Gen <span style="font-style: normal; font-size: 0.7rem; opacity: 0.3; letter-spacing: 0; vertical-align: top;">by MNTG</span></h1>
-            <p style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.5em; color: #bbb; margin-top: 15px; font-weight: bold;">Transformative Art Engine</p>
+        <header class="mb-16">
+            <h1 class="mntg-header text-black">Objkt Style Gen <span style="font-style: normal; font-size: 0.7rem; opacity: 0.3; letter-spacing: 0;">by MNTG</span></h1>
+            <p style="text-transform: uppercase; font-size: 10px; letter-spacing: 0.5em; color: #ccc; margin-top: 10px; font-weight: bold;">Multi-Engine Resilient AI</p>
         </header>
+
+        <!-- Token Field -->
+        <div id="tokenArea" class="mb-10 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <label style="font-size: 9px; font-weight: bold; text-transform: uppercase; color: #aaa;">Hugging Face Token (hf_...)</label>
+            <div class="flex gap-2">
+                <input type="password" id="tokenInput" placeholder="Einmalig einfügen für unlimitiert" class="flex-1 text-xs bg-transparent outline-none">
+                <button onclick="saveKey()" class="text-[9px] font-black uppercase border border-black px-3 py-1">Save</button>
+            </div>
+        </div>
 
         <!-- UI -->
         <div class="space-y-12">
             <div>
-                <label style="font-size: 10px; font-weight: 900; text-transform: uppercase; color: #ddd; letter-spacing: 0.2em;">Artist Profile Link</label>
+                <label style="font-size: 10px; font-weight: 900; text-transform: uppercase; color: #ccc; letter-spacing: 0.2em;">Artist Profile Link</label>
                 <input type="text" id="artistUrl" placeholder="https://objkt.com/users/..." class="mntg-input">
             </div>
 
             <div class="flex gap-2">
-                <button id="modeImage" onclick="setMode('image')" class="mntg-btn !py-3 !text-[10px]">Image</button>
-                <button id="modeGif" onclick="setMode('gif')" class="mntg-btn !py-3 !text-[10px]" style="background:#fff; color:#ddd; border:1px solid #eee;">GIF</button>
+                <button id="modeImage" onclick="setMode('image')" class="mntg-btn flex-1">Single Image</button>
+                <button id="modeGif" onclick="setMode('gif')" class="mntg-btn flex-1" style="background:#fff; color:#ccc; border:1px solid #eee;">Animated GIF</button>
             </div>
 
-            <button id="generateBtn" onclick="run()" class="mntg-btn text-2xl">Generate</button>
+            <button id="generateBtn" onclick="execute()" class="mntg-btn w-full text-xl py-6">Generate</button>
 
             <!-- Status -->
-            <div id="statusArea" class="hidden">
-                <div class="flex justify-between text-[10px] font-black uppercase mb-2">
-                    <span id="statusText">Working</span>
+            <div id="statusArea" class="hidden space-y-4">
+                <div class="flex justify-between text-[10px] font-black uppercase tracking-tighter">
+                    <span id="statusText" class="text-gray-400">Booting...</span>
                     <span id="percentText">0%</span>
                 </div>
-                <div style="background: #f0f0f0; width: 100%;"><div id="progressBar" class="progress-line"></div></div>
+                <div class="w-full bg-gray-100 h-0.5"><div id="progressBar" class="bg-black h-full transition-all duration-700" style="width: 0%"></div></div>
+                <div id="engineStatus" class="text-[8px] text-center uppercase text-gray-300 font-bold tracking-widest"></div>
             </div>
 
             <!-- Error -->
-            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center tracking-widest"></div>
+            <div id="errorArea" class="hidden p-4 bg-black text-white text-[10px] font-bold uppercase text-center tracking-widest leading-relaxed"></div>
 
             <!-- Result -->
-            <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-8 animate-in fade-in">
-                <div style="background: #fcfcfc; padding: 4px; border: 1px solid #eee;">
+            <div id="resultArea" class="hidden pt-12 border-t border-gray-100 space-y-8">
+                <div style="background: #fcfcfc; padding: 5px; border: 1px solid #eee;">
                     <img id="resultImage" src="" alt="" class="w-full h-auto shadow-2xl" crossorigin="anonymous">
                 </div>
                 <div class="flex justify-center">
-                    <button id="downloadBtn" class="mntg-btn !w-auto px-16" style="background:#fff; color:#000; border:2px solid #000;">Download Artwork</button>
+                    <button id="downloadBtn" class="mntg-btn px-16" style="background:#fff; color:#000; border:2px solid #000;">Download Artwork</button>
                 </div>
             </div>
         </div>
-
-        <footer style="margin-top: 120px; font-size: 9px; color: #eee; text-transform: uppercase; letter-spacing: 0.4em; text-align: center; border-top: 1px solid #f5f5f5; pt-10;">
-            MNTG System • Private Routing • Unlimited
-        </footer>
     </div>
 
-    <!-- Hidden Helper for Downloads -->
-    <canvas id="helperCanvas" style="display:none;"></canvas>
+    <!-- Hidden Canvas -->
+    <canvas id="hiddenCanvas" style="display:none;"></canvas>
 
     <script>
-        let currentMode = 'image';
-        let artistName = 'artist';
+        let mode = 'image';
+        let artist = 'artist';
 
-        function setMode(m) {
-            currentMode = m;
-            document.getElementById('modeImage').style = m === 'image' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
-            document.getElementById('modeGif').style = m === 'gif' ? "background:#000; color:#fff;" : "background:#fff; color:#ddd; border:1px solid #eee;";
+        function saveKey() {
+            const val = document.getElementById('tokenInput').value.trim();
+            if(val.startsWith('hf_')) { localStorage.setItem('mntg_tk', val); alert("Token saved."); document.getElementById('tokenArea').style.opacity = "0.3"; }
         }
 
-        function update(p, t) {
+        window.onload = () => { if(localStorage.getItem('mntg_tk')) document.getElementById('tokenArea').style.opacity = "0.3"; };
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('modeImage').style = m === 'image' ? "background:#000; color:#fff;" : "background:#fff; color:#ccc; border:1px solid #eee;";
+            document.getElementById('modeGif').style = m === 'gif' ? "background:#000; color:#fff;" : "background:#fff; color:#ccc; border:1px solid #eee;";
+        }
+
+        function update(p, t, eng = "") {
             document.getElementById('statusArea').classList.remove('hidden');
             document.getElementById('progressBar').style.width = p + '%';
             document.getElementById('percentText').innerText = p + '%';
             document.getElementById('statusText').innerText = t;
+            if(eng) document.getElementById('engineStatus').innerText = "Routing: " + eng;
         }
 
         function fail(msg) {
             const btn = document.getElementById('generateBtn');
             const err = document.getElementById('errorArea');
-            err.innerText = msg;
-            err.classList.remove('hidden');
+            err.innerText = msg; err.classList.remove('hidden');
             btn.classList.add('error-blink');
-            setTimeout(() => btn.classList.remove('error-blink'), 1000);
+            setTimeout(() => { btn.classList.remove('error-blink'); btn.disabled = false; btn.innerText = "Generate"; }, 1500);
             document.getElementById('statusArea').classList.add('hidden');
-            btn.disabled = false;
-            btn.innerText = "Generate";
         }
 
-        async function run() {
-            const urlIn = document.getElementById('artistUrl').value.trim();
+        async function execute() {
+            const input = document.getElementById('artistUrl').value.trim();
             const btn = document.getElementById('generateBtn');
-            if(!urlIn) return;
+            if(!input) return;
 
-            artistName = urlIn.split('/').filter(p => p).pop() || 'artist';
-            btn.disabled = true;
-            btn.innerText = "Starting...";
+            artist = input.split('/').filter(p => p).pop() || 'artist';
+            btn.disabled = true; btn.innerText = "Processing...";
             document.getElementById('errorArea').classList.add('hidden');
             document.getElementById('resultArea').classList.add('hidden');
 
             try {
-                update(20, "Accessing Blockchain...");
-                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artistName}&limit=10&sort.desc=id`);
+                update(20, "Extracting Style...");
+                const res = await fetch(`https://api.tzkt.io/v1/tokens?creator=${artist}&limit=8&sort.desc=id`);
                 const tokens = await res.json();
-                
-                if(!tokens || tokens.length === 0) throw new Error("Artist Data not found.");
+                if(!tokens || tokens.length === 0) throw new Error("Artist invalid.");
 
-                // Saubere Keywords für KI
-                const keywords = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 5).join(', ');
+                const prompt = tokens.map(t => t.metadata?.name || '').join(' ').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 4).slice(0, 5).join(', ');
 
-                if (currentMode === 'image') {
-                    update(60, "AI Painting...");
-                    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(keywords + " abstract painting, oil on canvas, masterpiece")}?width=512&height=512&nologo=true&seed=${Math.random()}&model=flux`;
-                    
-                    await forceWaitImage(url);
-                    show(url);
+                if (mode === 'image') {
+                    const imgData = await getResilientImage(prompt);
+                    display(imgData);
                 } else {
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        update(20 + (i*15), `Rendering ${i+1}/4`);
-                        const fUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(keywords + " movement " + i)}?width=512&height=512&nologo=true&seed=${Math.random()}&model=turbo`;
-                        await forceWaitImage(fUrl);
-                        frames.push(fUrl);
-                        if(i < 3) await new Promise(r => setTimeout(r, 2000));
+                        update(20 + (i*18), `Frame ${i+1}/4`);
+                        const f = await getResilientImage(prompt + ` variation ${i}`);
+                        frames.push(f);
+                        if(i < 3) await new Promise(r => setTimeout(r, 4000));
                     }
-                    update(90, "Finalizing GIF...");
+                    update(95, "Merging GIF...");
                     gifshot.createGIF({ images: frames, gifWidth: 512, gifHeight: 512, interval: 0.5 }, (obj) => {
-                        if(!obj.error) show(obj.image);
-                        else fail("GIF Rendering Error.");
+                        if(!obj.error) display(obj.image);
+                        else fail("GIF Merge Failed.");
                     });
                 }
-            } catch(e) {
-                fail(e.message.toUpperCase());
+            } catch(e) { fail(e.message.toUpperCase()); }
+        }
+
+        // --- DIE MULTI-ENGINE ROTATION ---
+        async function getResilientImage(prompt) {
+            const token = localStorage.getItem('mntg_tk');
+            const salt = Math.random().toString(36).substring(7);
+            
+            // 1. Engine: Pollinations Flux (Direkt-Injection)
+            update(50, "AI Painting...", "Engine 1 (Flux)");
+            try { return await tryLoad(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=flux`); } 
+            catch(e) {
+                // 2. Engine: Hugging Face Privat (Falls Token da)
+                if(token) {
+                    update(60, "Engine 1 Busy. Switching...", "Engine 2 (HF SDXL)");
+                    try { return await fetchHF(prompt, token); } catch(e2) { console.warn("HF fail."); }
+                }
+                // 3. Engine: Pollinations Turbo (Der schnelle Fallback)
+                update(70, "Backup Engine...", "Engine 3 (Turbo)");
+                return await tryLoad(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " " + salt)}?width=512&height=512&nologo=true&model=turbo`);
             }
         }
 
-        // Trick: Browser-natives Laden erzwingen
-        function forceWaitImage(url) {
+        function tryLoad(url) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
-                img.onload = () => resolve();
-                img.onerror = () => reject(new Error("AI Server Busy. Try again."));
+                img.onload = () => {
+                    const canvas = document.getElementById('hiddenCanvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 512; canvas.height = 512;
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL("image/png")); // Konvertiert Bild in Daten-String (Base64)
+                };
+                img.onerror = () => reject();
                 img.src = url;
-                setTimeout(() => reject(new Error("Timeout")), 45000);
+                setTimeout(() => reject(), 35000);
             });
         }
 
-        function show(src) {
+        async function fetchHF(prompt, token) {
+            const res = await fetch("https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({ inputs: prompt }),
+            });
+            if(!res.ok) throw new Error();
+            const blob = await res.blob();
+            return new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function display(src) {
             const img = document.getElementById('resultImage');
             img.src = src;
             document.getElementById('resultArea').classList.remove('hidden');
@@ -172,42 +207,12 @@
             document.getElementById('generateBtn').disabled = false;
             document.getElementById('generateBtn').innerText = "Generate";
 
-            // NEUER DOWNLOAD-FIX (Canvas-Injection)
             document.getElementById('downloadBtn').onclick = () => {
-                const btn = document.getElementById('downloadBtn');
-                btn.innerText = "Processing...";
-
-                if (src.startsWith('data:image/gif')) {
-                    save(src, `mntg_${artistName}.gif`);
-                    btn.innerText = "Download Artwork";
-                    return;
-                }
-
-                // Für Bilder: Auf Canvas zeichnen um CORS zu umgehen
-                const canvas = document.getElementById('helperCanvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
-                ctx.drawImage(img, 0, 0);
-                
-                try {
-                    const dataUrl = canvas.toDataURL("image/png");
-                    save(dataUrl, `mntg_${artistName}.png`);
-                } catch(e) {
-                    // Letzter Notfall-Fallback
-                    window.open(src, '_blank');
-                }
-                btn.innerText = "Download Artwork";
+                const a = document.createElement('a');
+                a.href = src;
+                a.download = `mntgstyle_${artist}_${Date.now()}.${mode === 'image' ? 'png' : 'gif'}`;
+                a.click();
             };
-        }
-
-        function save(url, name) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
         }
     </script>
 </body>
