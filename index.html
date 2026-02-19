@@ -9,17 +9,15 @@
     <style>
         @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         .loading-pulse { animation: pulse-soft 2s infinite; }
-
         @keyframes blink-red { 0%, 50%, 100% { opacity: 1; transform: scale(1); } 25%, 75% { opacity: 0.3; transform: scale(0.98); } }
         .error-blink { animation: blink-red 0.6s ease-in-out 2; }
-        
         #analyzeProgress { font-size: 0.85rem; color: #4f46e5; margin-top: 4px; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans min-h-screen">
 
     <div class="max-w-3xl mx-auto py-12 px-4">
-        <!-- Header -->
+        <!-- Header - MNTG Standard Style -->
         <header class="text-center mb-12">
             <h1 class="text-4xl font-extrabold tracking-tight mb-2">
                 Objkt Artist Style Gen<span class="align-super text-sm ml-1">by MNTG</span>
@@ -65,7 +63,7 @@
                     <div class="w-full bg-gray-100 rounded-full h-2.5">
                         <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
                     </div>
-                    <div id="analyzeProgress" class="hidden"></div>
+                    <div id="analyzeProgress" class="text-xs text-indigo-500 mt-2 font-medium"></div>
                 </div>
 
                 <!-- Error Display -->
@@ -75,11 +73,7 @@
                 <div id="resultArea" class="hidden mt-8 border-t pt-8 text-center">
                     <h3 class="text-lg font-bold mb-4">Dein generiertes Werk:</h3>
                     <div class="relative inline-block group">
-                        <!-- Spinner für das Bildladen -->
-                        <div id="imgSpinner" class="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg hidden">
-                            <span class="text-sm text-gray-500 animate-pulse">KI zeichnet...</span>
-                        </div>
-                        <img id="resultImage" src="" alt="Result" class="max-w-full rounded-lg shadow-lg border border-gray-200 mx-auto">
+                        <img id="resultImage" src="" alt="Result" class="max-w-full rounded-lg shadow-lg border border-gray-200 mx-auto bg-gray-50">
                         <div class="mt-4 flex justify-center gap-4">
                             <button id="downloadBtn" class="bg-gray-100 hover:bg-gray-200 px-6 py-2 rounded-lg font-semibold text-sm transition">
                                 Herunterladen
@@ -87,7 +81,7 @@
                         </div>
                     </div>
                     <p class="mt-4 text-xs text-gray-400 max-w-sm mx-auto">
-                        Dieses Werk ist ein KI-generiertes Unikat, inspiriert durch die Metadaten des Künstlers. Es ist keine Kopie bestehender Werke.
+                        KI-generiertes Unikat, inspiriert durch Metadaten. Keine Kopie bestehender Werke.
                     </p>
                 </div>
             </div>
@@ -141,34 +135,31 @@
             let address = input.split('/').filter(p => p).pop();
 
             btn.disabled = true;
-            btn.innerText = "Verarbeite...";
+            btn.innerText = "Bereite vor...";
 
             try {
-                updateProgress(10, "Lade Blockchain-Daten...");
-                const response = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=10&sort.desc=id`);
+                updateProgress(10, "Lade Artist-Daten...");
+                const response = await fetch(`https://api.tzkt.io/v1/tokens?creator=${address}&limit=12&sort.desc=id`);
+                if (!response.ok) throw new Error("Tezos API nicht erreichbar.");
                 const tokens = await response.json();
                 
-                if (!tokens || tokens.length === 0) throw new Error("Keine NFTs gefunden.");
+                if (!tokens || tokens.length === 0) throw new Error("Keine Werke für diese Adresse gefunden.");
 
-                for(let i=0; i < tokens.length; i++) {
-                    updateProgress(10 + Math.floor((i/tokens.length) * 30), "Analysiere Artist-Stil...", `Metadaten ${i+1} geladen`);
-                    await new Promise(r => setTimeout(r, 30));
-                }
-
+                updateProgress(30, "Analysiere Stil...");
                 const prompt = createStablePrompt(tokens);
 
                 if (currentMode === 'image') {
-                    updateProgress(80, "KI generiert das Kunstwerk...");
+                    updateProgress(60, "KI generiert Bild...");
                     const imgUrl = await forceLoadImage(prompt);
                     displayResult(imgUrl);
                 } else {
-                    updateProgress(50, "KI generiert GIF-Frames...");
+                    updateProgress(40, "KI generiert GIF...");
                     const frames = [];
                     for(let i=0; i<4; i++) {
-                        updateProgress(50 + (i*10), `Erstelle Frame ${i+1}/4...`);
+                        updateProgress(40 + (i*12), `Frame ${i+1}/4...`);
                         frames.push(await forceLoadImage(prompt + `, phase ${i}`));
                     }
-                    updateProgress(95, "GIF wird finalisiert...");
+                    updateProgress(90, "Erstelle Animation...");
                     assembleGif(frames);
                 }
 
@@ -178,25 +169,31 @@
         }
 
         function createStablePrompt(tokens) {
-            // Kürzerer, stabilerer Prompt um URL-Fehler zu vermeiden
+            // Extrahiere nur saubere Wörter, keine Sonderzeichen
             const textPool = tokens.map(t => t.metadata?.name || '').join(' ');
-            const keywords = textPool.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/).filter(w => w.length > 4).slice(0, 15).join(', ');
-            return `Digital art, inspired by ${keywords}, abstract unique composition, masterpiece, high resolution, no text`;
+            const keywords = textPool.toLowerCase()
+                .replace(/[^a-z\s]/g, '')
+                .split(/\s+/)
+                .filter(w => w.length > 4)
+                .slice(0, 10)
+                .join(', ');
+            
+            return `A professional digital art piece, style inspired by ${keywords || 'modern abstract art'}, unique composition, high resolution, transformative masterpiece, no text, no signatures`;
         }
 
-        // Neue Funktion: Verwendet direkte Bild-Objekte statt Fetch (umgeht Cloudflare 1033)
         function forceLoadImage(prompt) {
             return new Promise((resolve, reject) => {
-                const seed = Math.floor(Math.random() * 100000);
-                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&nologo=true`;
+                const seed = Math.floor(Math.random() * 999999);
+                // Nutze model=flux für höhere Stabilität bei Pollinations
+                const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&model=flux&nologo=true`;
                 
                 const img = new Image();
                 img.crossOrigin = "anonymous";
                 
                 const timeout = setTimeout(() => {
                     img.src = "";
-                    reject(new Error("Zeitüberschreitung bei der KI. Bitte erneut versuchen."));
-                }, 40000);
+                    reject(new Error("Die KI benötigt zu lange. Bitte versuche es noch einmal."));
+                }, 45000); // 45 Sekunden Zeit geben
 
                 img.onload = () => {
                     clearTimeout(timeout);
@@ -204,7 +201,7 @@
                 };
                 img.onerror = () => {
                     clearTimeout(timeout);
-                    reject(new Error("KI-Dienst aktuell überlastet (Cloudflare Error)."));
+                    reject(new Error("Bild-Server meldet Überlastung. Bitte kurz warten und erneut klicken."));
                 };
                 img.src = url;
             });
@@ -233,7 +230,7 @@
             document.getElementById('downloadBtn').onclick = () => {
                 const link = document.createElement('a');
                 link.href = source;
-                link.download = `mntg-style-${Date.now()}.png`;
+                link.download = `mntg-gen-${Date.now()}.png`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
